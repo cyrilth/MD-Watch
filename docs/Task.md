@@ -8,11 +8,11 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 ### Setup and shell
 
-- [ ] **1.1** Initialize Electron project (electron-vite or Electron Forge + Vite)
-- [ ] **1.2** Add React (or Vue) and configure renderer build
-- [ ] **1.3** Create main process entry: window, preload path
-- [ ] **1.4** Create preload script with contextBridge
-- [ ] **1.5** Expose IPC API: `openFile`, `openFolder`, `listDirectory`, `readFile`, `watchFile`, `writeFile`, `getSession`, `setSession`, `exportSession`, `importSession`
+- [x] **1.1** Initialize Electron project (electron-vite or Electron Forge + Vite)
+- [x] **1.2** Add React (or Vue) and configure renderer build
+- [x] **1.3** Create main process entry: window, preload path
+- [x] **1.4** Create preload script with contextBridge
+- [x] **1.5** Expose IPC API: `openFile`, `openFolder`, `listDirectory`, `readFile`, `watchFile`, `writeFile`, `getSession`, `setSession`, `exportSession`, `importSession`
 
 ### File open and watch
 
