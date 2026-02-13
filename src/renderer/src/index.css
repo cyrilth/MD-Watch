@@ -9,3 +9,150 @@ body {
 #root {
   min-height: 100vh;
 }
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fff;
+}
+
+.app-header button {
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.app-header-path {
+  font-size: 0.85rem;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
+.resizable-split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.resizable-split-left,
+.resizable-split-right {
+  min-width: 0;
+  overflow: auto;
+}
+
+.resizable-split-resizer {
+  width: 6px;
+  flex-shrink: 0;
+  background: var(--resizer-bg, #ddd);
+  cursor: col-resize;
+  user-select: none;
+}
+
+.resizable-split-resizer:hover {
+  background: var(--resizer-hover, #bbb);
+}
+
+.panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+.editor-panel {
+  border-right: 1px solid #e0e0e0;
+}
+
+.editor-panel > div {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.editor-panel .cm-editor,
+.editor-panel .cm-scroller {
+  min-height: 100%;
+}
+
+.preview-panel {
+  background: #fafafa;
+}
+
+.preview-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 1.25rem;
+}
+
+.preview-markdown {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #24292f;
+}
+
+.preview-markdown h1,
+.preview-markdown h2,
+.preview-markdown h3 {
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.preview-markdown h1 { font-size: 1.5rem; }
+.preview-markdown h2 { font-size: 1.25rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 0.3em; }
+.preview-markdown h3 { font-size: 1.1rem; }
+
+.preview-markdown p { margin: 0.75em 0; }
+.preview-markdown ul, .preview-markdown ol { margin: 0.75em 0; padding-left: 1.5em; }
+.preview-markdown code { background: #e8e8e8; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.9em; }
+.preview-markdown pre { background: #e8e8e8; padding: 1em; border-radius: 6px; overflow: auto; margin: 0.75em 0; }
+.preview-markdown pre code { background: none; padding: 0; }
+.preview-markdown blockquote { border-left: 4px solid #ccc; margin: 0.75em 0; padding-left: 1em; color: #555; }
+.preview-markdown a { color: #0969da; }
+.preview-markdown table { border-collapse: collapse; margin: 0.75em 0; }
+.preview-markdown th, .preview-markdown td { border: 1px solid #e0e0e0; padding: 0.4em 0.75em; text-align: left; }
+.preview-markdown th { background: #f0f0f0; }
+
+.preview-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.preview-plaintext {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #24292f;
+}

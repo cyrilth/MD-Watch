@@ -16,17 +16,17 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 ### File open and watch
 
-- [ ] **1.6** Implement `openFile`: dialog (filter .md, .txt), read file (utf-8, no lock), return path + content
-- [ ] **1.7** Add chokidar: watch single file on path selection; on `change` read file and send `file-changed` to renderer
-- [ ] **1.8** Stop previous watcher when opening a new file
+- [x] **1.6** Implement `openFile`: dialog (filter .md, .txt), read file (utf-8, no lock), return path + content
+- [x] **1.7** Add chokidar: watch single file on path selection; on `change` read file and send `file-changed` to renderer
+- [x] **1.8** Stop previous watcher when opening a new file
 
 ### Editor + preview UI
 
-- [ ] **1.9** Layout: two panels (editor | preview), resizable if desired
-- [ ] **1.10** Editor: CodeMirror 6; display current file content; accept updates from `file-changed`
-- [ ] **1.11** Preview for .md: integrate marked or markdown-it; render content to HTML in scrollable container
-- [ ] **1.12** Preview for .txt: render plain text (e.g. pre-wrap) in scrollable container
-- [ ] **1.13** Sync: on file load and on `file-changed`, update editor and preview
+- [x] **1.9** Layout: two panels (editor | preview), resizable if desired
+- [x] **1.10** Editor: CodeMirror 6; display current file content; accept updates from `file-changed`
+- [x] **1.11** Preview for .md: integrate marked or markdown-it; render content to HTML in scrollable container
+- [x] **1.12** Preview for .txt: render plain text (e.g. pre-wrap) in scrollable container
+- [x] **1.13** Sync: on file load and on `file-changed`, update editor and preview
 
 ### Scroll position on hot reload
 

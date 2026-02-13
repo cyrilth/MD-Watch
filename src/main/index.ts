@@ -45,6 +45,7 @@ function sendToRenderer(channel: string, ...args: unknown[]): void {
 function setupIpcHandlers(): void {
   ipcMain.handle('ping', () => 'pong')
 
+  /** Open file: dialog (filter .md, .txt), read utf-8 without locking, return path + content. */
   ipcMain.handle('openFile', async () => {
     const result = mainWindow
       ? await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters: MD_TXT_FILTER })
@@ -93,6 +94,8 @@ function setupIpcHandlers(): void {
     return fs.readFileSync(filePath, 'utf-8')
   })
 
+  /** Watch single file (chokidar); on change read file and send file-changed to renderer.
+   * Stops the previous watcher when opening a new file (one active watcher at a time). */
   ipcMain.handle('watchFile', async (_event, filePath: string) => {
     if (fileWatcher) {
       fileWatcher.close()
