@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import mermaid from 'mermaid'
 import { EditorPanel } from '@/components/EditorPanel'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { ResizableSplit } from '@/components/ResizableSplit'
+
+mermaid.initialize({ startOnLoad: false })
 
 function App() {
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null)
@@ -54,6 +57,17 @@ function App() {
       shouldRestoreScrollRef.current = false
     }
   }, [currentContent])
+
+  // Run Mermaid on .mermaid nodes after markdown is rendered; re-runs on file change so diagrams update on hot reload (1.19 + 1.20)
+  const isMarkdown = currentFilePath?.toLowerCase().endsWith('.md')
+  useEffect(() => {
+    if (!isMarkdown) return
+    const container = previewContainerRef.current
+    if (!container) return
+    const nodes = container.querySelectorAll<HTMLElement>('.mermaid')
+    if (nodes.length === 0) return
+    mermaid.run({ nodes, suppressErrors: true }).catch(() => {})
+  }, [currentContent, isMarkdown])
 
   return (
     <div className="app">

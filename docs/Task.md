@@ -36,10 +36,10 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 ### Mermaid (Markdown only)
 
-- [ ] **1.17** Add mermaid dependency (renderer)
-- [ ] **1.18** In markdown pipeline, detect fenced code blocks with language `mermaid`
-- [ ] **1.19** Replace each block with a container element (e.g. `div.mermaid`); call `mermaid.run()` on those nodes to render diagrams (use current Mermaid docs for run options)
-- [ ] **1.20** Re-run Mermaid on file change so diagrams update on hot reload
+- [x] **1.17** Add mermaid dependency (renderer)
+- [x] **1.18** In markdown pipeline, detect fenced code blocks with language `mermaid`
+- [x] **1.19** Replace each block with a container element (e.g. `div.mermaid`); call `mermaid.run()` on those nodes to render diagrams (use current Mermaid docs for run options)
+- [x] **1.20** Re-run Mermaid on file change so diagrams update on hot reload
 
 ### Folder view
 
