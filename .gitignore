@@ -3,6 +3,22 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# --- Electron / Node (MD-Watch) ---
+node_modules/
+dist/
+out/
+release/
+*.db
+.npm
+.eslintcache
+*.tsbuildinfo
+# Electron build output
+*.exe
+*.dmg
+*.AppImage
+# Vite
+.vite/
+
 # User-specific files
 *.rsuser
 *.suo
