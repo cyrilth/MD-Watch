@@ -30,9 +30,9 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 ### Scroll position on hot reload
 
-- [ ] **1.14** Before applying new content, save preview scrollTop and scrollHeight (or ratio)
-- [ ] **1.15** After rendering new content, restore scroll (absolute or ratio-based)
-- [ ] **1.16** Ensure restore only happens on hot-reload path, not on first load or user scroll
+- [x] **1.14** Before applying new content, save preview scrollTop and scrollHeight (or ratio)
+- [x] **1.15** After rendering new content, restore scroll (absolute or ratio-based)
+- [x] **1.16** Ensure restore only happens on hot-reload path, not on first load or user scroll
 
 ### Mermaid (Markdown only)
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorPanel } from '@/components/EditorPanel'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { ResizableSplit } from '@/components/ResizableSplit'
@@ -6,23 +6,54 @@ import { ResizableSplit } from '@/components/ResizableSplit'
 function App() {
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null)
   const [currentContent, setCurrentContent] = useState('')
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+  const savedScrollRatioRef = useRef<number>(0)
+  const shouldRestoreScrollRef = useRef(false)
 
-  // Sync: on file load — set content so editor and preview update
+  // Sync: on file load — set content so editor and preview update (no scroll restore)
   const handleOpenFile = useCallback(async () => {
     const result = await window.electron.openFile()
     if (!result) return
+    shouldRestoreScrollRef.current = false
     setCurrentFilePath(result.path)
     setCurrentContent(result.content)
     await window.electron.watchFile(result.path)
   }, [])
 
-  // Sync: on file-changed — update content so editor and preview stay in sync
+  // Sync: on file-changed (hot reload) — save scroll, mark for restore, then update content
   useEffect(() => {
     const unsubscribe = window.electron.onFileChanged((_path, content) => {
+      const el = previewContainerRef.current
+      if (el) {
+        const { scrollTop, scrollHeight, clientHeight } = el
+        const maxScroll = scrollHeight - clientHeight
+        savedScrollRatioRef.current = maxScroll > 0 ? scrollTop / maxScroll : 0
+      }
+      shouldRestoreScrollRef.current = true
       setCurrentContent(content)
     })
     return unsubscribe
   }, [])
+
+  // Restore preview scroll only after hot reload (1.15 + 1.16), not on first load or user scroll
+  useEffect(() => {
+    if (!shouldRestoreScrollRef.current) return
+    const el = previewContainerRef.current
+    const ratio = savedScrollRatioRef.current
+    if (el && ratio >= 0) {
+      const restore = () => {
+        const { scrollHeight, clientHeight } = el
+        const maxScroll = scrollHeight - clientHeight
+        if (maxScroll > 0) {
+          el.scrollTop = ratio * maxScroll
+        }
+        shouldRestoreScrollRef.current = false
+      }
+      requestAnimationFrame(restore)
+    } else {
+      shouldRestoreScrollRef.current = false
+    }
+  }, [currentContent])
 
   return (
     <div className="app">
@@ -46,6 +77,7 @@ function App() {
         }
         right={
           <PreviewPanel
+            ref={previewContainerRef}
             content={currentContent}
             isMarkdown={currentFilePath?.toLowerCase().endsWith('.md') ?? false}
           />

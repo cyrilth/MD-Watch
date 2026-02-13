@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
+import { forwardRef } from 'react'
 
 type PreviewPanelProps = {
   content: string
@@ -7,7 +8,10 @@ type PreviewPanelProps = {
 }
 
 /** Preview panel: .md → Markdown to HTML (marked); .txt → plain text (pre-wrap) in scrollable container. */
-export function PreviewPanel({ content, isMarkdown }: PreviewPanelProps) {
+export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(function PreviewPanel(
+  { content, isMarkdown },
+  ref
+) {
   if (!content.trim()) {
     return (
       <div className="panel preview-panel" data-testid="preview-panel">
@@ -19,7 +23,9 @@ export function PreviewPanel({ content, isMarkdown }: PreviewPanelProps) {
   if (!isMarkdown) {
     return (
       <div className="panel preview-panel" data-testid="preview-panel">
-        <div className="preview-content preview-plaintext">{content}</div>
+        <div ref={ref} className="preview-content preview-plaintext">
+          {content}
+        </div>
       </div>
     )
   }
@@ -30,9 +36,10 @@ export function PreviewPanel({ content, isMarkdown }: PreviewPanelProps) {
   return (
     <div className="panel preview-panel" data-testid="preview-panel">
       <div
+        ref={ref}
         className="preview-content preview-markdown"
         dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
       />
     </div>
   )
-}
+})
