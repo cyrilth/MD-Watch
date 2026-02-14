@@ -48,6 +48,7 @@ function App() {
   const savedScrollRatioRef = useRef<number>(0)
   const shouldRestoreScrollRef = useRef(false)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const contextTabIdRef = useRef<string | null>(null)
   const [showKanbanInstructionModal, setShowKanbanInstructionModal] = useState(false)
   const [showKanban, setShowKanban] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
@@ -619,6 +620,97 @@ function App() {
   }, [handleSave, handleSaveAs, handleNewFile, handleOpenFile, handleRefreshFile, activeTabId, closeTab, tabs, switchTab])
 
   // ---------------------------------------------------------------------------
+  // Menu actions (from main process application menu)
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    const unsubscribe = window.electron.onMenuAction((action: string) => {
+      switch (action) {
+        case 'new-file': handleNewFile(); break
+        case 'open-file': handleOpenFile(); break
+        case 'open-folder': handleOpenFolder(); break
+        case 'save': handleSave(); break
+        case 'save-as': handleSaveAs(); break
+        case 'refresh': handleRefreshFile(); break
+        case 'close-tab': {
+          // From tab context menu: close the right-clicked tab
+          const tabId = contextTabIdRef.current ?? activeTabId
+          if (tabId) closeTab(tabId)
+          contextTabIdRef.current = null
+          break
+        }
+        case 'close-other-tabs': {
+          const tabId = contextTabIdRef.current ?? activeTabId
+          if (tabId) {
+            setTabs((prev) => {
+              const keep = prev.filter((t) => t.id === tabId)
+              if (keep.length > 0) {
+                setActiveTabId(tabId)
+                const kept = keep[0]
+                if (kept.filePath) window.electron.watchFile(kept.filePath)
+                else window.electron.unwatchFile()
+              }
+              return keep
+            })
+          }
+          contextTabIdRef.current = null
+          break
+        }
+        case 'close-all-tabs': {
+          window.electron.unwatchFile()
+          const id = createTabId()
+          setTabs([{ id, filePath: null, content: '', kanbanRegion: null }])
+          setActiveTabId(id)
+          contextTabIdRef.current = null
+          break
+        }
+        case 'close-session': handleCloseSession(); break
+        case 'export-session': handleExportSession(); break
+        case 'import-session': handleImportSession(); break
+        case 'toggle-editor': setHideEditor((v) => !v); break
+        case 'toggle-preview': setHidePreview((v) => !v); break
+        case 'toggle-kanban': setShowKanban((v) => !v); break
+        case 'theme-light': setTheme('light'); window.electron.setSession({ theme: 'light' }); break
+        case 'theme-dark': setTheme('dark'); window.electron.setSession({ theme: 'dark' }); break
+        case 'show-help': setShowHelp((v) => !v); break
+        case 'show-kanban-instructions': setShowKanban(true); setShowKanbanInstructionModal(true); break
+        case 'show-about': setShowAbout(true); break
+        case 'check-updates': setShowAbout(true); handleCheckForUpdates(); break
+      }
+    })
+    return unsubscribe
+  }, [
+    handleNewFile, handleOpenFile, handleOpenFolder, handleSave, handleSaveAs,
+    handleRefreshFile, activeTabId, closeTab, handleCloseSession,
+    handleExportSession, handleImportSession, handleCheckForUpdates,
+  ])
+
+  // ---------------------------------------------------------------------------
+  // Context menu (right-click)
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      e.preventDefault()
+      const target = e.target as HTMLElement
+
+      // Detect context: editor, preview, or general
+      if (target.closest('.cm-editor')) {
+        window.electron.showContextMenu('editor')
+      } else if (target.closest('.preview-panel')) {
+        window.electron.showContextMenu('preview')
+      } else if (target.closest('.tab-bar')) {
+        // Tab context is handled per-tab via onContextMenu
+        return
+      } else {
+        window.electron.showContextMenu('general')
+      }
+    }
+    window.addEventListener('contextmenu', handler)
+    return () => window.removeEventListener('contextmenu', handler)
+  }, [])
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
@@ -700,7 +792,14 @@ function App() {
             <div
               key={tab.id}
               className={`tab ${tab.id === activeTabId ? 'tab-active' : ''}`}
+              data-tab-id={tab.id}
               onClick={() => switchTab(tab.id)}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                contextTabIdRef.current = tab.id
+                window.electron.showContextMenu('tab')
+              }}
               title={tab.filePath ?? 'Untitled'}
             >
               <span className="tab-label">

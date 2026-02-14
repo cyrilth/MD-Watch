@@ -16,6 +16,7 @@ interface Window {
     unwatchFile: () => Promise<void>
     writeFile: (filePath: string, content: string) => Promise<void>
     saveFileAs: (content: string, defaultName?: string) => Promise<{ path: string } | null>
+    showContextMenu: (context: string) => Promise<void>
     getAppVersion: () => Promise<string>
     checkForUpdates: () => Promise<{
       currentVersion: string
@@ -31,5 +32,6 @@ interface Window {
     importSession: () => Promise<{ success: boolean; error?: string }>
     onFileChanged: (callback: (path: string, content: string) => void) => () => void
     onSessionImported: (callback: () => void) => () => void
+    onMenuAction: (callback: (action: string) => void) => () => void
   }
 }

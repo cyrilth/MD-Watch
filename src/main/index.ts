@@ -2,7 +2,7 @@
  * Main process entry point.
  * Creates the app window, wires the preload script, loads the renderer, and handles IPC.
  */
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import https from 'node:https'
@@ -212,6 +212,61 @@ function setupIpcHandlers(): void {
     await shell.openExternal(url)
   })
 
+  /** Show a native context menu. The renderer sends a context string to pick the right menu.
+   *  Actions are sent back to the renderer via 'menu-action'. */
+  ipcMain.handle('showContextMenu', async (_event, context: string) => {
+    if (!mainWindow) return
+
+    let template: Electron.MenuItemConstructorOptions[] = []
+
+    switch (context) {
+      case 'editor':
+        template = [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { type: 'separator' },
+          { role: 'selectAll' },
+        ]
+        break
+
+      case 'preview':
+        template = [
+          { role: 'copy' },
+          { role: 'selectAll' },
+        ]
+        break
+
+      case 'tab':
+        template = [
+          { label: 'Close Tab', click: () => sendToRenderer('menu-action', 'close-tab') },
+          { label: 'Close Other Tabs', click: () => sendToRenderer('menu-action', 'close-other-tabs') },
+          { label: 'Close All Tabs', click: () => sendToRenderer('menu-action', 'close-all-tabs') },
+        ]
+        break
+
+      default:
+        // General context menu
+        template = [
+          { label: 'New File', click: () => sendToRenderer('menu-action', 'new-file') },
+          { label: 'Open File...', click: () => sendToRenderer('menu-action', 'open-file') },
+          { label: 'Open Folder...', click: () => sendToRenderer('menu-action', 'open-folder') },
+          { type: 'separator' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { type: 'separator' },
+          { label: 'Toggle Kanban', click: () => sendToRenderer('menu-action', 'toggle-kanban') },
+        ]
+        break
+    }
+
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup({ window: mainWindow })
+  })
+
   ipcMain.handle('getSession', () => {
     return readSessionFromDb()
   })
@@ -275,6 +330,190 @@ function setupIpcHandlers(): void {
   })
 }
 
+// ---------------------------------------------------------------------------
+// Application menu
+// ---------------------------------------------------------------------------
+
+function sendMenuAction(action: string): void {
+  sendToRenderer('menu-action', action)
+}
+
+function buildAppMenu(): void {
+  const isMac = process.platform === 'darwin'
+
+  const template: Electron.MenuItemConstructorOptions[] = [
+    // macOS app menu
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about' as const },
+              { type: 'separator' as const },
+              { role: 'services' as const },
+              { type: 'separator' as const },
+              { role: 'hide' as const },
+              { role: 'hideOthers' as const },
+              { role: 'unhide' as const },
+              { type: 'separator' as const },
+              { role: 'quit' as const },
+            ],
+          },
+        ]
+      : []),
+
+    // File
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'New File',
+          accelerator: 'CmdOrCtrl+N',
+          registerAccelerator: false,
+          click: () => sendMenuAction('new-file'),
+        },
+        {
+          label: 'Open File...',
+          accelerator: 'CmdOrCtrl+O',
+          registerAccelerator: false,
+          click: () => sendMenuAction('open-file'),
+        },
+        {
+          label: 'Open Folder...',
+          click: () => sendMenuAction('open-folder'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          registerAccelerator: false,
+          click: () => sendMenuAction('save'),
+        },
+        {
+          label: 'Save As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          registerAccelerator: false,
+          click: () => sendMenuAction('save-as'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Refresh from Disk',
+          accelerator: 'CmdOrCtrl+R',
+          registerAccelerator: false,
+          click: () => sendMenuAction('refresh'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Close Tab',
+          accelerator: 'CmdOrCtrl+W',
+          registerAccelerator: false,
+          click: () => sendMenuAction('close-tab'),
+        },
+        {
+          label: 'Close Session',
+          click: () => sendMenuAction('close-session'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Export Session...',
+          click: () => sendMenuAction('export-session'),
+        },
+        {
+          label: 'Import Session...',
+          click: () => sendMenuAction('import-session'),
+        },
+        { type: 'separator' },
+        isMac ? { role: 'close' } : { role: 'quit' },
+      ],
+    },
+
+    // Edit
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+
+    // View
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Toggle Editor',
+          click: () => sendMenuAction('toggle-editor'),
+        },
+        {
+          label: 'Toggle Preview',
+          click: () => sendMenuAction('toggle-preview'),
+        },
+        {
+          label: 'Toggle Kanban',
+          accelerator: 'CmdOrCtrl+K',
+          registerAccelerator: false,
+          click: () => sendMenuAction('toggle-kanban'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Light Theme',
+          click: () => sendMenuAction('theme-light'),
+        },
+        {
+          label: 'Dark Theme',
+          click: () => sendMenuAction('theme-dark'),
+        },
+        { type: 'separator' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { role: 'resetZoom' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        { role: 'toggleDevTools' },
+      ],
+    },
+
+    // Help
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Keyboard Shortcuts',
+          accelerator: 'F1',
+          registerAccelerator: false,
+          click: () => sendMenuAction('show-help'),
+        },
+        {
+          label: 'Kanban Instructions',
+          click: () => sendMenuAction('show-kanban-instructions'),
+        },
+        { type: 'separator' },
+        {
+          label: 'About MD-Watch',
+          click: () => sendMenuAction('show-about'),
+        },
+        {
+          label: 'Check for Updates...',
+          click: () => sendMenuAction('check-updates'),
+        },
+        { type: 'separator' },
+        {
+          label: 'GitHub Repository',
+          click: () => shell.openExternal('https://github.com/cyrilth/MD-Watch'),
+        },
+      ],
+    },
+  ]
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
+}
+
 function createWindow(): void {
   // Icon for title bar and taskbar. Windows uses .ico (multi-size) to avoid squish and small/top-aligned taskbar icon.
   const assetsDir = path.join(app.getAppPath(), 'assets')
@@ -330,6 +569,7 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   setupIpcHandlers()
+  buildAppMenu()
   createWindow()
 })
 

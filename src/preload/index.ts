@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('electron', {
   saveFileAs: (content: string, defaultName?: string) =>
     ipcRenderer.invoke('saveFileAs', content, defaultName),
 
+  // Context menu
+  showContextMenu: (context: string) => ipcRenderer.invoke('showContextMenu', context),
+
   // App info & updates
   getAppVersion: () => ipcRenderer.invoke('getAppVersion'),
   checkForUpdates: () => ipcRenderer.invoke('checkForUpdates'),
@@ -42,5 +45,12 @@ contextBridge.exposeInMainWorld('electron', {
     const handler = () => callback()
     ipcRenderer.on('session-imported', handler)
     return () => ipcRenderer.removeListener('session-imported', handler)
+  },
+
+  // Subscribe to menu actions (main sends 'menu-action' with an action string)
+  onMenuAction: (callback: (action: string) => void) => {
+    const handler = (_: unknown, action: string) => callback(action)
+    ipcRenderer.on('menu-action', handler)
+    return () => ipcRenderer.removeListener('menu-action', handler)
   },
 })

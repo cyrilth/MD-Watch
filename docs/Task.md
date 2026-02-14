@@ -196,3 +196,24 @@ Use this file to track implementation. Check off tasks as they are completed.
 - [x] **9.11** Add `electron-builder` dev dependency and `build` config in `package.json` (appId, targets for win/mac/linux, icons, NSIS options)
 - [x] **9.12** Add `pack`, `dist`, and `release` npm scripts
 - [x] **9.13** Create `.github/workflows/release.yml`: triggered on `v*` tags; matrix build (windows, linux, macos); electron-builder packaging; artifact upload; GitHub Release via `softprops/action-gh-release`
+
+---
+
+## Application menu and context menus
+
+### Custom application menu
+
+- [x] **10.1** Import `Menu` from Electron; build custom menu template with File, Edit, View, Help submenus
+- [x] **10.2** Menu items send `menu-action` IPC events to the renderer via `sendToRenderer`
+- [x] **10.3** Use `registerAccelerator: false` on items with shortcuts handled by the renderer to avoid double-firing
+- [x] **10.4** Call `buildAppMenu()` in `app.whenReady()` to set the application menu on startup
+
+### Right-click context menus
+
+- [x] **10.5** Main process: `showContextMenu` IPC handler builds context-specific menus and shows them via `Menu.popup()`
+- [x] **10.6** Four context types: `editor` (Undo/Redo/Cut/Copy/Paste/Select All), `preview` (Copy/Select All), `tab` (Close Tab/Close Other Tabs/Close All Tabs), `general` (New File/Open File/Open Folder/Copy/Paste/Toggle Kanban)
+- [x] **10.7** Preload: expose `showContextMenu(context)` IPC call
+- [x] **10.8** Renderer: global `contextmenu` event listener detects click target (`.cm-editor`, `.preview-panel`, `.tab-bar`, or general) and calls `showContextMenu`
+- [x] **10.9** Tab context menu uses `contextTabIdRef` to track which tab was right-clicked; `close-tab` from context menu closes the right-clicked tab
+- [x] **10.10** `close-other-tabs`: keeps only the right-clicked tab; `close-all-tabs`: closes everything and opens a blank untitled tab
+- [x] **10.11** All context menu actions routed through the existing `onMenuAction` handler in `App.tsx`

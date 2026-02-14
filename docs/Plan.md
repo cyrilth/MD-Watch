@@ -167,6 +167,21 @@ flowchart LR
 
 ---
 
+## Application menu and context menus (implemented)
+
+- **Custom application menu**: Replaces the default Electron menu with a menu bar matching the app's features. Built with `Menu.buildFromTemplate()` in the main process. Menu items send `menu-action` IPC events to the renderer. Accelerator labels are shown but keys are handled by the renderer (`registerAccelerator: false`) to avoid double-firing.
+  - **File**: New File, Open File, Open Folder, Save, Save As, Refresh from Disk, Close Tab, Close Session, Export Session, Import Session, Exit/Quit.
+  - **Edit**: Undo, Redo, Cut, Copy, Paste, Select All (native Electron roles).
+  - **View**: Toggle Editor, Toggle Preview, Toggle Kanban, Light/Dark Theme, Zoom In/Out/Reset, Full Screen, DevTools.
+  - **Help**: Keyboard Shortcuts, Kanban Instructions, About MD-Watch, Check for Updates, GitHub Repository.
+- **Right-click context menus**: Native context menus via `showContextMenu` IPC handler using `Menu.popup()`. The renderer detects the click target and sends a context string:
+  - **Editor** (`.cm-editor`): Undo, Redo, Cut, Copy, Paste, Select All.
+  - **Preview** (`.preview-panel`): Copy, Select All.
+  - **Tab bar**: Close Tab, Close Other Tabs, Close All Tabs — operates on the right-clicked tab via `contextTabIdRef`.
+  - **General** (anywhere else): New File, Open File, Open Folder, Copy, Paste, Toggle Kanban.
+
+---
+
 ## Open / optional
 
 - Folder view: lazy-load on expand; optional Refresh.

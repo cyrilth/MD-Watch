@@ -42,6 +42,8 @@ Pre-built installers are available on the [Releases](https://github.com/cyrilth/
 - **Hide editor / Hide preview**: Header checkboxes to show only editor, only preview, or both (resizable)
 - **Dark and light theme**: Theme selector (Light / Dark) in header; persisted in session; editor uses matching CodeMirror theme
 - **Keyboard shortcuts**: Common shortcuts for all major actions; press `F1` or click "Help" to see the full list
+- **Application menu**: Custom menu bar (File, Edit, View, Help) matching all app features with keyboard shortcut labels
+- **Context menus**: Right-click for context-aware native menus — editor (Undo/Redo/Cut/Copy/Paste), preview (Copy/Select All), tabs (Close Tab/Close Other Tabs/Close All Tabs), and general areas
 - **About & version**: "About" modal shows app version, GitHub link, and a "Check for updates" button that queries GitHub Releases
 - **Auto-update check**: Compares local version against the latest GitHub Release; offers a download button when a newer version is available
 
