@@ -21,6 +21,8 @@ Pre-built installers are available on the [Releases](https://github.com/cyrilth/
 
 > **Tip**: Inside the app, click **About** then **Check for updates** to see if a newer release is available, with a one-click download link.
 
+> **Note (Windows):** The installer is not code-signed. Windows SmartScreen may show an "unknown publisher" warning — click **More info** then **Run anyway** to proceed. This is expected for unsigned open-source apps.
+
 ## Features
 
 - **Tabs**: Open multiple files in tabs (VS Code–style tab bar); switch, close, and manage independently
