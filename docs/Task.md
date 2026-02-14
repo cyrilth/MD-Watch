@@ -167,3 +167,32 @@ Use this file to track implementation. Check off tasks as they are completed.
 - [x] **8.1** Global keyboard handler: `Ctrl+N`, `Ctrl+O`, `Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+R`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+K`, `F1`
 - [x] **8.2** Header "Help" button and `F1` toggle a styled modal listing all shortcuts in a table with `<kbd>` elements
 - [x] **8.3** Help modal styled with theme-aware CSS (light/dark); shares overlay/card styling with kanban instruction modal
+
+---
+
+## About, versioning, and auto-update
+
+### Versioning
+
+- [x] **9.1** Set meaningful version in `package.json` (`1.0.0`); add `repository` field and `author`
+- [x] **9.2** Main process: `getAppVersion` IPC handler returning `app.getVersion()`
+- [x] **9.3** Preload: expose `getAppVersion`, `checkForUpdates`, `openExternal`
+- [x] **9.4** Renderer: fetch version on mount; display in About modal
+
+### About modal
+
+- [x] **9.5** Header "About" button opens modal with logo, version, description, GitHub link, and update check section
+- [x] **9.6** Styled About modal CSS (theme-aware); download button for available updates
+
+### Check for updates
+
+- [x] **9.7** Main process: `checkForUpdates` IPC handler queries GitHub Releases API (`/repos/cyrilth/MD-Watch/releases/latest`)
+- [x] **9.8** Semver comparison helper (`compareVersions`); returns `{ currentVersion, latestVersion, updateAvailable, downloadUrl }`
+- [x] **9.9** Main process: `openExternal` IPC handler using `shell.openExternal` for download link
+- [x] **9.10** Renderer: "Check for updates" button with loading/result states; "Download latest" button when update available
+
+### CI/CD — GitHub Actions
+
+- [x] **9.11** Add `electron-builder` dev dependency and `build` config in `package.json` (appId, targets for win/mac/linux, icons, NSIS options)
+- [x] **9.12** Add `pack`, `dist`, and `release` npm scripts
+- [x] **9.13** Create `.github/workflows/release.yml`: triggered on `v*` tags; matrix build (windows, linux, macos); electron-builder packaging; artifact upload; GitHub Release via `softprops/action-gh-release`

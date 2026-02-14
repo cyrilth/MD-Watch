@@ -51,6 +51,15 @@ function App() {
   const [showKanbanInstructionModal, setShowKanbanInstructionModal] = useState(false)
   const [showKanban, setShowKanban] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
+  const [appVersion, setAppVersion] = useState('')
+  const [updateInfo, setUpdateInfo] = useState<{
+    checking: boolean
+    updateAvailable?: boolean
+    latestVersion?: string
+    downloadUrl?: string
+    error?: string
+  }>({ checking: false })
 
   // ---------------------------------------------------------------------------
   // Derived active tab
@@ -309,6 +318,7 @@ function App() {
 
   useEffect(() => {
     window.electron.getSession().then(applySession)
+    window.electron.getAppVersion().then(setAppVersion)
   }, [applySession])
 
   useEffect(() => {
@@ -525,6 +535,22 @@ function App() {
     window.electron.setSession({ theme: value })
   }, [])
 
+  const handleCheckForUpdates = useCallback(async () => {
+    setUpdateInfo({ checking: true })
+    try {
+      const result = await window.electron.checkForUpdates()
+      setUpdateInfo({
+        checking: false,
+        updateAvailable: result.updateAvailable,
+        latestVersion: result.latestVersion,
+        downloadUrl: result.downloadUrl,
+        error: result.error,
+      })
+    } catch {
+      setUpdateInfo({ checking: false, error: 'Failed to check for updates.' })
+    }
+  }, [])
+
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts
   // ---------------------------------------------------------------------------
@@ -661,6 +687,9 @@ function App() {
         </select>
         <button type="button" onClick={() => setShowHelp(true)}>
           Help
+        </button>
+        <button type="button" onClick={() => setShowAbout(true)}>
+          About
         </button>
       </header>
 
@@ -829,6 +858,75 @@ function App() {
               type="button"
               className="kanban-modal-close"
               onClick={() => setShowHelp(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      {showAbout && (
+        <div
+          className="kanban-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="about-modal-title"
+          onClick={() => setShowAbout(false)}
+        >
+          <div className="kanban-modal about-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 id="about-modal-title" className="kanban-modal-title">About MD-Watch</h2>
+            <div className="about-content">
+              <img src={logoUrl} alt="MD-Watch" className="about-logo" />
+              <p className="about-version">Version {appVersion || '—'}</p>
+              <p className="about-desc">
+                A Markdown viewer and editor with hot reload, Mermaid diagrams, folder view, kanban board, and session persistence.
+              </p>
+              <div className="about-links">
+                <button
+                  type="button"
+                  className="about-link-btn"
+                  onClick={() => window.electron.openExternal('https://github.com/cyrilth/MD-Watch')}
+                >
+                  GitHub
+                </button>
+              </div>
+              <hr className="about-divider" />
+              <div className="about-update-section">
+                <button
+                  type="button"
+                  className="about-link-btn"
+                  onClick={handleCheckForUpdates}
+                  disabled={updateInfo.checking}
+                >
+                  {updateInfo.checking ? 'Checking...' : 'Check for updates'}
+                </button>
+                {updateInfo.error && (
+                  <p className="about-update-msg about-update-error">Could not check for updates.</p>
+                )}
+                {updateInfo.updateAvailable === true && (
+                  <div className="about-update-msg about-update-available">
+                    <p>
+                      A new version <strong>v{updateInfo.latestVersion}</strong> is available!
+                    </p>
+                    <button
+                      type="button"
+                      className="about-download-btn"
+                      onClick={() => {
+                        if (updateInfo.downloadUrl) window.electron.openExternal(updateInfo.downloadUrl)
+                      }}
+                    >
+                      Download latest
+                    </button>
+                  </div>
+                )}
+                {updateInfo.updateAvailable === false && !updateInfo.error && (
+                  <p className="about-update-msg about-update-current">You are on the latest version.</p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="kanban-modal-close"
+              onClick={() => setShowAbout(false)}
             >
               Close
             </button>

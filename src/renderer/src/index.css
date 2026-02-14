@@ -655,6 +655,120 @@ body {
   color: var(--app-text);
 }
 
+/* About modal */
+.about-modal {
+  max-width: 400px;
+  text-align: center;
+}
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.about-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+}
+
+.about-version {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--app-text);
+  margin: 0;
+}
+
+.about-desc {
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.about-links {
+  display: flex;
+  gap: 8px;
+}
+
+.about-link-btn {
+  background: var(--app-btn-bg);
+  color: var(--app-btn-text);
+  border: 1px solid var(--app-border);
+  padding: 5px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.about-link-btn:hover {
+  background: var(--app-btn-hover);
+}
+
+.about-link-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.about-divider {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--app-border);
+  margin: 6px 0;
+}
+
+.about-update-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-update-msg {
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.about-update-error {
+  color: #d93025;
+}
+
+.about-update-available {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.about-update-available p {
+  margin: 0;
+  color: var(--app-text);
+}
+
+.about-update-current {
+  color: var(--app-text-muted);
+}
+
+.about-download-btn {
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  padding: 6px 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.about-download-btn:hover {
+  background: #1565c0;
+}
+
 .kanban-board {
   position: relative;
   z-index: 1;

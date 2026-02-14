@@ -2,15 +2,28 @@
  * Main process entry point.
  * Creates the app window, wires the preload script, loads the renderer, and handles IPC.
  */
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import https from 'node:https'
 import {
   closeSessionDb,
   getSessionDbPath,
   readSessionFromDb,
   writeSessionToDb,
 } from './session-db'
+
+/** Compare two semver strings. Returns >0 if a>b, <0 if a<b, 0 if equal. */
+function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] ?? 0
+    const nb = pb[i] ?? 0
+    if (na !== nb) return na - nb
+  }
+  return 0
+}
 
 const PRELOAD_PATH = path.join(__dirname, '../preload/index.js')
 const RENDERER_HTML_PATH = path.join(__dirname, '../renderer/index.html')
@@ -139,6 +152,64 @@ function setupIpcHandlers(): void {
       console.error('saveFileAs write error', err)
       return null
     }
+  })
+
+  /** Return the app version from package.json */
+  ipcMain.handle('getAppVersion', () => {
+    return app.getVersion()
+  })
+
+  /** Check GitHub Releases for a newer version. Returns { updateAvailable, latestVersion, downloadUrl, currentVersion } */
+  ipcMain.handle('checkForUpdates', async () => {
+    const currentVersion = app.getVersion()
+    const owner = 'cyrilth'
+    const repo = 'MD-Watch'
+    try {
+      const data = await new Promise<string>((resolve, reject) => {
+        const req = https.get(
+          `https://api.github.com/repos/${owner}/${repo}/releases/latest`,
+          { headers: { 'User-Agent': 'MD-Watch-App' } },
+          (res) => {
+            if (res.statusCode === 404) {
+              resolve(JSON.stringify({ tag_name: `v${currentVersion}`, html_url: '' }))
+              return
+            }
+            if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+              // follow redirect
+              https.get(res.headers.location, { headers: { 'User-Agent': 'MD-Watch-App' } }, (r2) => {
+                let body = ''
+                r2.on('data', (chunk: Buffer) => (body += chunk.toString()))
+                r2.on('end', () => resolve(body))
+                r2.on('error', reject)
+              }).on('error', reject)
+              return
+            }
+            let body = ''
+            res.on('data', (chunk: Buffer) => (body += chunk.toString()))
+            res.on('end', () => resolve(body))
+            res.on('error', reject)
+          }
+        )
+        req.on('error', reject)
+      })
+      const release = JSON.parse(data) as { tag_name: string; html_url: string }
+      const latestVersion = release.tag_name.replace(/^v/, '')
+      const updateAvailable = compareVersions(latestVersion, currentVersion) > 0
+      return {
+        currentVersion,
+        latestVersion,
+        updateAvailable,
+        downloadUrl: release.html_url || `https://github.com/${owner}/${repo}/releases`,
+      }
+    } catch (err) {
+      console.error('checkForUpdates error', err)
+      return { currentVersion, latestVersion: currentVersion, updateAvailable: false, downloadUrl: '', error: String(err) }
+    }
+  })
+
+  /** Open an external URL in the default browser */
+  ipcMain.handle('openExternal', async (_event, url: string) => {
+    await shell.openExternal(url)
   })
 
   ipcMain.handle('getSession', () => {

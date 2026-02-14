@@ -16,6 +16,15 @@ interface Window {
     unwatchFile: () => Promise<void>
     writeFile: (filePath: string, content: string) => Promise<void>
     saveFileAs: (content: string, defaultName?: string) => Promise<{ path: string } | null>
+    getAppVersion: () => Promise<string>
+    checkForUpdates: () => Promise<{
+      currentVersion: string
+      latestVersion: string
+      updateAvailable: boolean
+      downloadUrl: string
+      error?: string
+    }>
+    openExternal: (url: string) => Promise<void>
     getSession: () => Promise<Record<string, unknown>>
     setSession: (data: Record<string, unknown>) => Promise<void>
     exportSession: () => Promise<{ success: boolean; error?: string }>

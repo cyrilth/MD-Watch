@@ -21,6 +21,8 @@ A desktop app to preview Markdown and plain text with hot reload, Mermaid diagra
 - **Hide editor / Hide preview**: Header checkboxes to show only editor, only preview, or both (resizable)
 - **Dark and light theme**: Theme selector (Light / Dark) in header; persisted in session; editor uses matching CodeMirror theme
 - **Keyboard shortcuts**: Common shortcuts for all major actions; press `F1` or click "Help" to see the full list
+- **About & version**: "About" modal shows app version, GitHub link, and a "Check for updates" button that queries GitHub Releases
+- **Auto-update check**: Compares local version against the latest GitHub Release; offers a download button when a newer version is available
 
 ### Keyboard shortcuts
 
@@ -37,6 +39,99 @@ A desktop app to preview Markdown and plain text with hot reload, Mermaid diagra
 | `Ctrl+K` | Toggle kanban panel |
 | `F1` | Toggle help |
 
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) **v18+** (v20 recommended)
+- npm (comes with Node.js)
+- **Windows**: No extra tools needed (native modules are rebuilt via `electron-rebuild` in `postinstall`)
+- **macOS**: Xcode Command Line Tools — run `xcode-select --install`
+- **Linux**: Build essentials — run `sudo apt install build-essential python3` (Debian/Ubuntu) or the equivalent for your distro
+
+## Getting started
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/cyrilth/MD-Watch.git
+cd MD-Watch
+
+# 2. Install dependencies (also rebuilds native modules for Electron)
+npm install
+
+# 3. Run in development mode (hot reload)
+npm run dev
+```
+
+The app window opens automatically. Edits to renderer code are hot-reloaded; edits to main/preload require restarting `npm run dev`.
+
+## Available scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the app in development mode with hot reload |
+| `npm run build` | Compile main, preload, and renderer to `out/` |
+| `npm start` | Preview the production build (runs `electron-vite preview`) |
+| `npm run pack` | Package the app into a directory (no installer) via electron-builder |
+| `npm run dist` | Package and create distributable installers for the current platform |
+| `npm run release` | Build + package distributable installers (full pipeline) |
+
+## Building distributable installers locally
+
+After cloning and installing dependencies, you can create platform-specific installers:
+
+### Windows
+
+```bash
+npm run build
+npx electron-builder --win
+```
+
+Outputs in `dist/`:
+- `MD-Watch Setup <version>.exe` (NSIS installer)
+- `MD-Watch-<version>-win.zip`
+
+### macOS
+
+```bash
+npm run build
+npx electron-builder --mac
+```
+
+Outputs in `dist/`:
+- `MD-Watch-<version>.dmg`
+- `MD-Watch-<version>-mac.zip`
+
+### Linux
+
+```bash
+npm run build
+npx electron-builder --linux
+```
+
+Outputs in `dist/`:
+- `MD-Watch-<version>.AppImage`
+- `md-watch_<version>_amd64.deb`
+
+### All platforms at once (on the current OS)
+
+```bash
+npm run release
+```
+
+> **Note**: Cross-compilation (e.g. building a Windows installer on macOS) is not supported by default. Use the GitHub Actions CI/CD workflow to build for all platforms — see below.
+
+## Releasing a new version
+
+1. Update the `version` field in `package.json` (e.g. `1.1.0`)
+2. Commit and push
+3. Create and push a tag:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+4. The **Build & Release** GitHub Action automatically builds for Windows, macOS, and Linux, then publishes a GitHub Release with all installers attached
+
 ## Docs
 
 - **[Project plan](docs/Plan.md)** — Architecture, phases, tech stack, file layout
@@ -44,7 +139,7 @@ A desktop app to preview Markdown and plain text with hot reload, Mermaid diagra
 
 ## Tech (summary)
 
-Electron, React, CodeMirror 6, chokidar (main), better-sqlite3, Mermaid, @dnd-kit. See [docs/Plan.md](docs/Plan.md) for details.
+Electron, React, CodeMirror 6, chokidar (main), better-sqlite3, Mermaid, @dnd-kit, electron-builder. See [docs/Plan.md](docs/Plan.md) for details.
 
 ## License
 

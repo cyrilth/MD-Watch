@@ -19,6 +19,9 @@ Build an Electron desktop app that:
 - **Hide editor / hide preview** toggles to show one panel full-width or both resizable
 - **Dark and light theme** (selector in header; session-persisted; CSS variables; CodeMirror theme prop)
 - **Keyboard shortcuts** for all major actions; **Help modal** (F1) lists them all
+- **About & version**: About modal shows version, GitHub link, and update check
+- **Auto-update check**: Queries GitHub Releases API; download button when newer version available
+- **CI/CD**: GitHub Actions workflow (`release.yml`) builds and publishes releases on version tags
 
 ---
 
@@ -151,6 +154,16 @@ flowchart LR
 | `F1` | Toggle help |
 
 - **Help modal**: Header "Help" button or `F1`. Opens a styled modal listing all shortcuts in a table with `<kbd>` elements. Shares the modal overlay/card styling with the kanban instruction modal. Supports both light and dark themes.
+
+---
+
+## About, versioning, and auto-update (implemented)
+
+- **Versioning**: App version sourced from `package.json` → `app.getVersion()` in Electron main process. Exposed to renderer via `getAppVersion` IPC handler.
+- **About modal**: Header "About" button. Shows logo, version string, a GitHub link (opens in default browser via `shell.openExternal`), and a "Check for updates" button.
+- **Check for updates**: Main process queries `https://api.github.com/repos/cyrilth/MD-Watch/releases/latest`. Compares `tag_name` (stripped `v` prefix) against local version using semver comparison. Returns `{ currentVersion, latestVersion, updateAvailable, downloadUrl }`. Renderer shows result in the About modal; if an update is available, a "Download latest" button opens the release page.
+- **GitHub Actions CI/CD**: `.github/workflows/release.yml`. Triggered on `v*` tags. Matrix build for Windows (NSIS + zip), macOS (DMG + zip), and Linux (AppImage + deb). Uses `electron-builder` for packaging. Artifacts uploaded per platform, then combined into a single GitHub Release via `softprops/action-gh-release`.
+- **Release workflow**: Bump `version` in `package.json` → commit → `git tag v<version>` → push tag → GitHub Actions builds and publishes release.
 
 ---
 

@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('electron', {
   saveFileAs: (content: string, defaultName?: string) =>
     ipcRenderer.invoke('saveFileAs', content, defaultName),
 
+  // App info & updates
+  getAppVersion: () => ipcRenderer.invoke('getAppVersion'),
+  checkForUpdates: () => ipcRenderer.invoke('checkForUpdates'),
+  openExternal: (url: string) => ipcRenderer.invoke('openExternal', url),
+
   // Session
   getSession: () => ipcRenderer.invoke('getSession'),
   setSession: (data: Record<string, unknown>) => ipcRenderer.invoke('setSession', data),
