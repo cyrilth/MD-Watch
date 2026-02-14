@@ -6,6 +6,21 @@
 
 A desktop app to preview Markdown and plain text with hot reload, Mermaid diagrams, a folder view, and a bidirectional kanban board driven by selected text. Built with Electron to learn the stack.
 
+## Download & Install
+
+Pre-built installers are available on the [Releases](https://github.com/cyrilth/MD-Watch/releases) page.
+
+| Platform | File | How to install |
+| --- | --- | --- |
+| **Windows** | `MD-Watch Setup <version>.exe` | Run the installer and follow the prompts. Optionally choose a custom install directory. |
+| **Windows** (portable) | `MD-Watch-<version>-win.zip` | Extract the zip anywhere and run `MD-Watch.exe`. No installation required. |
+| **macOS** | `MD-Watch-<version>.dmg` | Open the DMG and drag **MD-Watch** into your Applications folder. |
+| **macOS** (portable) | `MD-Watch-<version>-mac.zip` | Extract and run **MD-Watch.app**. |
+| **Linux** | `MD-Watch-<version>.AppImage` | Make it executable (`chmod +x MD-Watch-*.AppImage`) and run it. Works on most distros. |
+| **Linux** (Debian/Ubuntu) | `md-watch_<version>_amd64.deb` | Install with `sudo dpkg -i md-watch_*.deb`. |
+
+> **Tip**: Inside the app, click **About** then **Check for updates** to see if a newer release is available, with a one-click download link.
+
 ## Features
 
 - **Tabs**: Open multiple files in tabs (VS Code–style tab bar); switch, close, and manage independently

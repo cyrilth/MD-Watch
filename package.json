@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "Markdown and plain text previewer with hot reload, Mermaid, folder view, and kanban",
   "main": "./out/main/index.js",
-  "author": "cyrilth",
+  "author": {
+    "name": "cyrilth",
+    "email": "cyrilth@users.noreply.github.com"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
