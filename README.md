@@ -1,5 +1,9 @@
 # MD-Watch
 
+[![Build & Release](https://github.com/cyrilth/MD-Watch/actions/workflows/release.yml/badge.svg)](https://github.com/cyrilth/MD-Watch/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/github/v/tag/cyrilth/MD-Watch?label=version&sort=semver)](https://github.com/cyrilth/MD-Watch/releases)
+
 A desktop app to preview Markdown and plain text with hot reload, Mermaid diagrams, a folder view, and a bidirectional kanban board driven by selected text. Built with Electron to learn the stack.
 
 ## Features
