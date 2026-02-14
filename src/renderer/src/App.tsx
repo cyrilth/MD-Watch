@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import mermaid from 'mermaid'
-import { EditorPanel } from '@/components/EditorPanel'
+import { EditorPanel, type KanbanRegion } from '@/components/EditorPanel'
 import { FolderView } from '@/components/FolderView'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { ResizableSplit } from '@/components/ResizableSplit'
+import { kanbanToMarkdown, parseKanbanSelection } from '@/kanban/parser'
+import { KanbanBoard } from '@/components/KanbanBoard'
 
 mermaid.initialize({ startOnLoad: false })
 
@@ -11,19 +13,61 @@ function App() {
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null)
   const [currentContent, setCurrentContent] = useState('')
   const [folderRootPath, setFolderRootPath] = useState<string | null>(null)
+  /** Kanban region in current file: selection range { start, end } (2.1). Used by parser (2.2) and kanban UI (2.4+). */
+  const [kanbanRegion, setKanbanRegion] = useState<KanbanRegion | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const savedScrollRatioRef = useRef<number>(0)
   const shouldRestoreScrollRef = useRef(false)
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Restore session on load: lastOpenedFolder → folder view (1.26)
-  useEffect(() => {
-    window.electron.getSession().then((session: Record<string, unknown>) => {
-      const folder = session?.lastOpenedFolder
-      if (typeof folder === 'string' && folder.trim()) {
-        setFolderRootPath(folder)
-      }
-    })
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setToast({ message, type })
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null)
+      toastTimeoutRef.current = null
+    }, 3000)
   }, [])
+
+  // Clear kanban region when file changes (range is for previous file)
+  useEffect(() => {
+    setKanbanRegion(null)
+  }, [currentFilePath])
+
+  // Re-parse on content and selection change; invalid range clears kanban (2.2, 2.3, 2.8)
+  const kanbanState = useMemo(() => {
+    if (!kanbanRegion || kanbanRegion.start === kanbanRegion.end) return null
+    const len = currentContent.length
+    if (kanbanRegion.start > len || kanbanRegion.end > len || kanbanRegion.start < 0) {
+      return null
+    }
+    return parseKanbanSelection(currentContent, kanbanRegion)
+  }, [currentContent, kanbanRegion])
+
+  // When range becomes invalid, clear selection so UI doesn’t show stale kanban (2.8)
+  useEffect(() => {
+    if (!kanbanRegion) return
+    const len = currentContent.length
+    if (kanbanRegion.start > len || kanbanRegion.end > len || kanbanRegion.start < 0) {
+      setKanbanRegion(null)
+    }
+  }, [currentContent, kanbanRegion])
+
+  // On card drop: replace region with new markdown, update content, write file (2.6, 2.7)
+  const handleKanbanChange = useCallback(
+    (next: { columns: { id: string; title: string; cards: { id: string; text: string }[] }[] }) => {
+      if (!kanbanRegion || !currentFilePath) return
+      const newMarkdown = kanbanToMarkdown(next)
+      const newContent =
+        currentContent.slice(0, kanbanRegion.start) +
+        newMarkdown +
+        currentContent.slice(kanbanRegion.end)
+      setCurrentContent(newContent)
+      window.electron.writeFile(currentFilePath, newContent).catch(() => {})
+    },
+    [currentContent, kanbanRegion, currentFilePath]
+  )
 
   const openFileWithPath = useCallback(async (path: string) => {
     shouldRestoreScrollRef.current = false
@@ -32,10 +76,44 @@ function App() {
       setCurrentFilePath(path)
       setCurrentContent(content)
       await window.electron.watchFile(path)
+      await window.electron.setSession({ lastFilePath: path })
     } catch {
       // ignore
     }
   }, [])
+
+  const openFileWithPathRef = useRef(openFileWithPath)
+  openFileWithPathRef.current = openFileWithPath
+
+  const applySession = useCallback(async (session: Record<string, unknown>) => {
+    if (typeof session?.lastOpenedFolder === 'string' && session.lastOpenedFolder.trim()) {
+      setFolderRootPath(session.lastOpenedFolder)
+    }
+    if (typeof session?.lastFilePath === 'string' && session.lastFilePath.trim()) {
+      await openFileWithPathRef.current(session.lastFilePath).catch(() => {})
+    }
+    if (typeof session?.previewScrollRatio === 'number') {
+      savedScrollRatioRef.current = session.previewScrollRatio
+      shouldRestoreScrollRef.current = true
+    }
+    const sel = session?.kanbanSelection
+    if (sel && typeof sel === 'object' && typeof (sel as { start?: number }).start === 'number' && typeof (sel as { end?: number }).end === 'number') {
+      setKanbanRegion({ start: (sel as { start: number }).start, end: (sel as { end: number }).end })
+    }
+  }, [])
+
+  // Restore session on load (3.5)
+  useEffect(() => {
+    window.electron.getSession().then(applySession)
+  }, [applySession])
+
+  // On import: reload session (3.8); toast shown from handleImportSession (3.9)
+  useEffect(() => {
+    const unsubscribe = window.electron.onSessionImported(() => {
+      window.electron.getSession().then(applySession)
+    })
+    return unsubscribe
+  }, [applySession])
 
   // Sync: on file load — set content so editor and preview update (no scroll restore)
   const handleOpenFile = useCallback(async () => {
@@ -45,6 +123,7 @@ function App() {
     setCurrentFilePath(result.path)
     setCurrentContent(result.content)
     await window.electron.watchFile(result.path)
+    await window.electron.setSession({ lastFilePath: result.path })
   }, [])
 
   const handleOpenFolder = useCallback(async () => {
@@ -54,6 +133,47 @@ function App() {
       await window.electron.setSession({ lastOpenedFolder: path })
     }
   }, [])
+
+  const handleExportSession = useCallback(async () => {
+    const result = await window.electron.exportSession()
+    if (result.success) showToast('Data exported.', 'success')
+    else showToast(result.error ?? 'Export failed.', 'error')
+  }, [showToast])
+
+  const handleImportSession = useCallback(async () => {
+    const result = await window.electron.importSession()
+    if (result.success) showToast('Data imported.', 'success')
+    else showToast(result.error ?? 'Import failed.', 'error')
+  }, [showToast])
+
+  // Persist preview scroll ratio on user scroll (3.6)
+  const scrollPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handlePreviewScroll = useCallback(() => {
+    const el = previewContainerRef.current
+    if (!el) return
+    const { scrollTop, scrollHeight, clientHeight } = el
+    const maxScroll = scrollHeight - clientHeight
+    const ratio = maxScroll > 0 ? scrollTop / maxScroll : 0
+    if (scrollPersistTimeoutRef.current) clearTimeout(scrollPersistTimeoutRef.current)
+    scrollPersistTimeoutRef.current = setTimeout(() => {
+      scrollPersistTimeoutRef.current = null
+      window.electron.setSession({ previewScrollRatio: ratio })
+    }, 500)
+  }, [])
+
+  // Persist kanban selection when it changes (3.6)
+  const kanbanPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!kanbanRegion) return
+    if (kanbanPersistTimeoutRef.current) clearTimeout(kanbanPersistTimeoutRef.current)
+    kanbanPersistTimeoutRef.current = setTimeout(() => {
+      kanbanPersistTimeoutRef.current = null
+      window.electron.setSession({ kanbanSelection: kanbanRegion })
+    }, 300)
+    return () => {
+      if (kanbanPersistTimeoutRef.current) clearTimeout(kanbanPersistTimeoutRef.current)
+    }
+  }, [kanbanRegion])
 
   // Sync: on file-changed (hot reload) — save scroll, mark for restore, then update content
   useEffect(() => {
@@ -110,6 +230,12 @@ function App() {
         <button type="button" onClick={handleOpenFolder}>
           Open folder
         </button>
+        <button type="button" onClick={handleExportSession}>
+          Export data
+        </button>
+        <button type="button" onClick={handleImportSession}>
+          Import data
+        </button>
         {currentFilePath && (
           <span className="app-header-path" title={currentFilePath}>
             {currentFilePath}
@@ -120,24 +246,38 @@ function App() {
         <aside className="app-sidebar">
           <FolderView rootPath={folderRootPath} onOpenFile={openFileWithPath} />
         </aside>
-        <ResizableSplit
-          left={
-            <EditorPanel
-              value={currentContent}
-              onChange={setCurrentContent}
-              filePath={currentFilePath}
-            />
-          }
-          right={
-            <PreviewPanel
-              ref={previewContainerRef}
-              content={currentContent}
-              isMarkdown={currentFilePath?.toLowerCase().endsWith('.md') ?? false}
-            />
-          }
-          defaultLeftPercent={50}
-        />
+        <div className="app-main">
+          <ResizableSplit
+            left={
+              <EditorPanel
+                value={currentContent}
+                onChange={setCurrentContent}
+                filePath={currentFilePath}
+                onSelectionChange={setKanbanRegion}
+              />
+            }
+            right={
+              <PreviewPanel
+                ref={previewContainerRef}
+                content={currentContent}
+                isMarkdown={currentFilePath?.toLowerCase().endsWith('.md') ?? false}
+                onScroll={handlePreviewScroll}
+              />
+            }
+            defaultLeftPercent={50}
+          />
+          {kanbanState && (
+            <section className="kanban-section" aria-label="Kanban board">
+              <KanbanBoard state={kanbanState} onKanbanChange={handleKanbanChange} />
+            </section>
+          )}
+        </div>
       </div>
+      {toast && (
+        <div className={`app-toast app-toast-${toast.type}`} role="status">
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }

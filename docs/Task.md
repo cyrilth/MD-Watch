@@ -56,21 +56,21 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 ### Selection and parsing
 
-- [ ] **2.1** Editor: track selection (CodeMirror 6 API); store kanban region `{ start, end }` (and file path)
-- [ ] **2.2** Parser: given selected text, split by any heading line (`#`, `##`, `###`, etc.) → columns; within each block parse `-` / `*` list items → cards
-- [ ] **2.3** Re-parse on file content change and on selection change; update internal kanban state
+- [x] **2.1** Editor: track selection (CodeMirror 6 API); store kanban region `{ start, end }` (and file path)
+- [x] **2.2** Parser: given selected text, split by any heading line (`#`, `##`, `###`, etc.) → columns; within each block parse `-` / `*` list items → cards
+- [x] **2.3** Re-parse on file content change and on selection change; update internal kanban state
 
 ### Kanban UI
 
-- [ ] **2.4** Add DnD library (e.g. @dnd-kit)
-- [ ] **2.5** Render columns as lanes, items as draggable cards
-- [ ] **2.6** On card drop to another column: compute new markdown (move list item between heading blocks), replace selected region in full content
-- [ ] **2.7** Call `writeFile` with full content; handle watcher firing and re-sync (preserve scroll)
+- [x] **2.4** Add DnD library (e.g. @dnd-kit)
+- [x] **2.5** Render columns as lanes, items as draggable cards
+- [x] **2.6** On card drop to another column: compute new markdown (move list item between heading blocks), replace selected region in full content
+- [x] **2.7** Call `writeFile` with full content; handle watcher firing and re-sync (preserve scroll)
 
 ### Edge cases
 
-- [ ] **2.8** If selection range invalid (e.g. file shortened): clear or disable kanban, optional message
-- [ ] **2.9** Debounce or coalesce chokidar change events to avoid double reload
+- [x] **2.8** If selection range invalid (e.g. file shortened): clear or disable kanban, optional message
+- [x] **2.9** Debounce or coalesce chokidar change events to avoid double reload
 
 ---
 
@@ -78,23 +78,23 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 ### SQLite session
 
-- [ ] **3.1** Add better-sqlite3 (or sql.js) in main process
-- [ ] **3.2** Create DB file (e.g. in user data dir); create table(s) for session (e.g. key/value or normalized)
-- [ ] **3.3** Implement getSession: read from DB, return object (lastFilePath, lastOpenedFolder, scroll, kanban selection, etc.)
-- [ ] **3.4** Implement setSession(data): write to DB
-- [ ] **3.5** Wire session restore on app load: restore last opened file (if readable), last opened folder, scroll, kanban selection; do not persist or restore folder tree expand/collapse state
-- [ ] **3.6** Call setSession when user opens file, changes scroll, sets kanban selection, opens folder
+- [x] **3.1** Add better-sqlite3 (or sql.js) in main process
+- [x] **3.2** Create DB file (e.g. in user data dir); create table(s) for session (e.g. key/value or normalized)
+- [x] **3.3** Implement getSession: read from DB, return object (lastFilePath, lastOpenedFolder, scroll, kanban selection, etc.)
+- [x] **3.4** Implement setSession(data): write to DB
+- [x] **3.5** Wire session restore on app load: restore last opened file (if readable), last opened folder, scroll, kanban selection; do not persist or restore folder tree expand/collapse state
+- [x] **3.6** Call setSession when user opens file, changes scroll, sets kanban selection, opens folder
 
 ### Import / export (raw .db)
 
-- [ ] **3.7** Export: menu/UI “Export data” → main shows save dialog (default session.db) → copy current DB file to chosen path; return success/error to renderer
-- [ ] **3.8** Import: menu/UI “Import data” → main shows open dialog for .db → merge keys from selected .db into current session DB (imported values override for same keys), notify renderer to reload session
-- [ ] **3.9** Renderer: show success or error toast/message after export/import
-- [ ] **3.10** Preload: exportSession(), importSession() (dialogs in main)
+- [x] **3.7** Export: menu/UI “Export data” → main shows save dialog (default session.db) → copy current DB file to chosen path; return success/error to renderer
+- [x] **3.8** Import: menu/UI “Import data” → main shows open dialog for .db → merge keys from selected .db into current session DB (imported values override for same keys), notify renderer to reload session
+- [x] **3.9** Renderer: show success or error toast/message after export/import
+- [x] **3.10** Preload: exportSession(), importSession() (dialogs in main)
 
 ---
 
 ## Polish and optional
 
-- [ ] **4.1** Optional: lazy-load folder tree (list directory on expand)
-- [ ] **4.2** Optional: “Refresh” button for folder view to re-scan current folder
+- [x] **4.1** Optional: lazy-load folder tree (list directory on expand)
+- [x] **4.2** Optional: “Refresh” button for folder view to re-scan current folder

@@ -98,6 +98,20 @@ export function FolderView({ rootPath, onOpenFile }: FolderViewProps) {
     directoryContentsRef.current = directoryContents
   }, [directoryContents])
 
+  const loadRoot = useCallback(() => {
+    if (!rootPath) return
+    setLoading(true)
+    setExpandedPaths(new Set())
+    setDirectoryContents({})
+    setLoadingPaths(new Set())
+    directoryContentsRef.current = {}
+    window.electron
+      .listDirectory(rootPath)
+      .then(setEntries)
+      .catch(() => setEntries([]))
+      .finally(() => setLoading(false))
+  }, [rootPath])
+
   useEffect(() => {
     if (!rootPath) {
       setEntries([])
@@ -106,13 +120,8 @@ export function FolderView({ rootPath, onOpenFile }: FolderViewProps) {
       setLoadingPaths(new Set())
       return
     }
-    setLoading(true)
-    window.electron
-      .listDirectory(rootPath)
-      .then(setEntries)
-      .catch(() => setEntries([]))
-      .finally(() => setLoading(false))
-  }, [rootPath])
+    loadRoot()
+  }, [rootPath, loadRoot])
 
   const toggleDirectory = useCallback((path: string) => {
     setExpandedPaths((prev) => {
@@ -145,6 +154,16 @@ export function FolderView({ rootPath, onOpenFile }: FolderViewProps) {
       <div className="folder-view-root" title={rootPath}>
         <span className="folder-view-root-icon">📁</span>
         <span className="folder-view-root-label">{rootName}</span>
+        <button
+          type="button"
+          className="folder-view-refresh"
+          onClick={loadRoot}
+          disabled={loading}
+          title="Refresh folder"
+          aria-label="Refresh folder"
+        >
+          ↻
+        </button>
       </div>
       {loading ? (
         <div className="folder-view-loading">Loading…</div>

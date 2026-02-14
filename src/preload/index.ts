@@ -28,4 +28,11 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('file-changed', handler)
     return () => ipcRenderer.removeListener('file-changed', handler)
   },
+
+  // Subscribe to session imported (main sends after import so renderer can reload session)
+  onSessionImported: (callback: () => void) => {
+    const handler = () => callback()
+    ipcRenderer.on('session-imported', handler)
+    return () => ipcRenderer.removeListener('session-imported', handler)
+  },
 })

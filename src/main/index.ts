@@ -5,6 +5,12 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import {
+  closeSessionDb,
+  getSessionDbPath,
+  readSessionFromDb,
+  writeSessionToDb,
+} from './session-db'
 
 const PRELOAD_PATH = path.join(__dirname, '../preload/index.js')
 const RENDERER_HTML_PATH = path.join(__dirname, '../renderer/index.html')
@@ -16,25 +22,6 @@ const MD_TXT_FILTER = [
 
 let mainWindow: BrowserWindow | null = null
 let fileWatcher: { close: () => void } | null = null
-
-function getSessionPath(): string {
-  return path.join(app.getPath('userData'), 'session.json')
-}
-
-function readSession(): Record<string, unknown> {
-  try {
-    const data = fs.readFileSync(getSessionPath(), 'utf-8')
-    return JSON.parse(data) as Record<string, unknown>
-  } catch {
-    return {}
-  }
-}
-
-function writeSession(data: Record<string, unknown>): void {
-  const dir = path.dirname(getSessionPath())
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(getSessionPath(), JSON.stringify(data, null, 2), 'utf-8')
-}
 
 function sendToRenderer(channel: string, ...args: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -106,13 +93,19 @@ function setupIpcHandlers(): void {
     const chokidar = await import('chokidar')
     const watcher = chokidar.default.watch(filePath, { persistent: true })
     fileWatcher = watcher
+    const DEBOUNCE_MS = 150
+    let changeTimeout: ReturnType<typeof setTimeout> | null = null
     watcher.on('change', () => {
-      try {
-        const content = fs.readFileSync(filePath, 'utf-8')
-        sendToRenderer('file-changed', filePath, content)
-      } catch (err) {
-        console.error('watchFile read error', err)
-      }
+      if (changeTimeout) clearTimeout(changeTimeout)
+      changeTimeout = setTimeout(() => {
+        changeTimeout = null
+        try {
+          const content = fs.readFileSync(filePath, 'utf-8')
+          sendToRenderer('file-changed', filePath, content)
+        } catch (err) {
+          console.error('watchFile read error', err)
+        }
+      }, DEBOUNCE_MS)
     })
   })
 
@@ -121,28 +114,26 @@ function setupIpcHandlers(): void {
   })
 
   ipcMain.handle('getSession', () => {
-    return readSession()
+    return readSessionFromDb()
   })
 
   ipcMain.handle('setSession', (_event, data: Record<string, unknown>) => {
-    const current = readSession()
-    writeSession({ ...current, ...data })
+    writeSessionToDb(data)
   })
 
   ipcMain.handle('exportSession', async () => {
     try {
       const result = mainWindow
         ? await dialog.showSaveDialog(mainWindow, {
-            defaultPath: 'session.json',
-            filters: [{ name: 'JSON', extensions: ['json'] }],
+            defaultPath: 'session.db',
+            filters: [{ name: 'SQLite DB', extensions: ['db'] }, { name: 'All', extensions: ['*'] }],
           })
         : await dialog.showSaveDialog({
-            defaultPath: 'session.json',
-            filters: [{ name: 'JSON', extensions: ['json'] }],
+            defaultPath: 'session.db',
+            filters: [{ name: 'SQLite DB', extensions: ['db'] }, { name: 'All', extensions: ['*'] }],
           })
       if (result.canceled || !result.filePath) return { success: false, error: 'Canceled' }
-      const data = readSession()
-      fs.writeFileSync(result.filePath, JSON.stringify(data, null, 2), 'utf-8')
+      fs.copyFileSync(getSessionDbPath(), result.filePath)
       return { success: true }
     } catch (err) {
       return { success: false, error: String(err) }
@@ -154,18 +145,29 @@ function setupIpcHandlers(): void {
       const result = mainWindow
         ? await dialog.showOpenDialog(mainWindow, {
             properties: ['openFile'],
-            filters: [{ name: 'JSON', extensions: ['json'] }, { name: 'All', extensions: ['*'] }],
+            filters: [{ name: 'SQLite DB', extensions: ['db'] }, { name: 'All', extensions: ['*'] }],
           })
         : await dialog.showOpenDialog({
             properties: ['openFile'],
-            filters: [{ name: 'JSON', extensions: ['json'] }, { name: 'All', extensions: ['*'] }],
+            filters: [{ name: 'SQLite DB', extensions: ['db'] }, { name: 'All', extensions: ['*'] }],
           })
       if (result.canceled || result.filePaths.length === 0) return { success: false, error: 'Canceled' }
       const filePath = result.filePaths[0]
-      const raw = fs.readFileSync(filePath, 'utf-8')
-      const imported = JSON.parse(raw) as Record<string, unknown>
-      const current = readSession()
-      writeSession({ ...current, ...imported })
+      const { createRequire } = await import('node:module')
+      const require = createRequire(import.meta.url)
+      const Database = require('better-sqlite3')
+      const importedDb = new Database(filePath, { readonly: true })
+      const rows = importedDb.prepare('SELECT key, value FROM session').all() as { key: string; value: string }[]
+      importedDb.close()
+      const merged: Record<string, unknown> = {}
+      for (const row of rows) {
+        try {
+          merged[row.key] = JSON.parse(row.value)
+        } catch {
+          merged[row.key] = row.value
+        }
+      }
+      writeSessionToDb(merged)
       sendToRenderer('session-imported')
       return { success: true }
     } catch (err) {
@@ -213,6 +215,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  closeSessionDb()
   if (process.platform !== 'darwin') app.quit()
 })
 

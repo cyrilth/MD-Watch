@@ -14,5 +14,6 @@ interface Window {
     exportSession: () => Promise<{ success: boolean; error?: string }>
     importSession: () => Promise<{ success: boolean; error?: string }>
     onFileChanged: (callback: (path: string, content: string) => void) => () => void
+    onSessionImported: (callback: () => void) => () => void
   }
 }

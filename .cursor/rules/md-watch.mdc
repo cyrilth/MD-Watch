@@ -1,0 +1,33 @@
+---
+description: MD-Watch project context and conventions for future development
+alwaysApply: true
+---
+
+# MD-Watch Development Rule
+
+## Source of truth
+
+- **Architecture and phases**: Read `docs/Plan.md`.
+- **Implementation checklist**: Read `docs/Task.md`. When implementing a task, refer to its ID (e.g. 1.26, 2.2) and check it off in Task.md when done.
+
+## Architecture
+
+- **Main process** (`src/main/`): All file I/O (fs), chokidar (single-file watch), SQLite session (`session-db.ts`), IPC handlers. No Node/fs in renderer.
+- **Preload** (`src/preload/`): contextBridge only; expose `window.electron.*` (openFile, openFolder, listDirectory, readFile, watchFile, writeFile, getSession, setSession, exportSession, importSession, onFileChanged, onSessionImported).
+- **Renderer** (`src/renderer/src/`): React + TypeScript. Use `@/` alias for `src/renderer/src`. No require('fs') or Node APIs; use IPC.
+
+## Tech stack
+
+- Electron, electron-vite, React, TypeScript, CodeMirror 6 (@uiw/react-codemirror), marked, DOMPurify, mermaid, @dnd-kit/core, better-sqlite3 (main), chokidar (main).
+
+## Key paths and conventions
+
+- **Session keys** (SQLite key/value): `lastFilePath`, `lastOpenedFolder`, `previewScrollRatio`, `kanbanSelection` (object with `start`, `end`). Do not persist folder tree expand/collapse.
+- **Kanban**: Region = `{ start, end }` in current file. Parser in `src/renderer/src/kanban/parser.ts`: split by any `#` heading → columns; `-` / `*` list items → cards. Serialize back with `kanbanToMarkdown()`. Replace only the selected region in content, then writeFile.
+- **Dialogs**: In main, use `mainWindow ? dialog.show...(mainWindow, opts) : dialog.show...(opts)` so the first argument is never undefined.
+- **File watch**: One active watcher; close previous on new open. Debounce chokidar `change` (e.g. 150ms) before sending `file-changed` to avoid double reload.
+
+## Adding features
+
+- New IPC: add handler in `src/main/index.ts`, expose in `src/preload/index.ts`, then call from renderer via `window.electron.*`.
+- New session keys: merge in via `setSession({ key: value })`; values are JSON-serialized in DB. Restore in App from `getSession()` on load or after import.

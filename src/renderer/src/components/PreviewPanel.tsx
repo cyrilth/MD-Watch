@@ -27,11 +27,13 @@ marked.use({
 type PreviewPanelProps = {
   content: string
   isMarkdown: boolean
+  /** Called when user scrolls (for session persist). */
+  onScroll?: () => void
 }
 
 /** Preview panel: .md → Markdown to HTML (marked); .txt → plain text (pre-wrap) in scrollable container. */
 export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(function PreviewPanel(
-  { content, isMarkdown },
+  { content, isMarkdown, onScroll },
   ref
 ) {
   if (!content.trim()) {
@@ -45,7 +47,7 @@ export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(functi
   if (!isMarkdown) {
     return (
       <div className="panel preview-panel" data-testid="preview-panel">
-        <div ref={ref} className="preview-content preview-plaintext">
+        <div ref={ref} className="preview-content preview-plaintext" onScroll={onScroll}>
           {content}
         </div>
       </div>
@@ -61,6 +63,7 @@ export const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(functi
         ref={ref}
         className="preview-content preview-markdown"
         dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+        onScroll={onScroll}
       />
     </div>
   )
