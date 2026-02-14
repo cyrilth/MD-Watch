@@ -61,6 +61,7 @@ function setupIpcHandlers(): void {
     }
   })
 
+  /** openFolder: directory picker, return selected path or null. */
   ipcMain.handle('openFolder', async () => {
     const result = mainWindow
       ? await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] })
@@ -69,6 +70,7 @@ function setupIpcHandlers(): void {
     return result.filePaths[0]
   })
 
+  /** listDirectory(dirPath): return entries { name, path, isDirectory } for subdirs and .md/.txt files only. */
   ipcMain.handle('listDirectory', async (_event, dirPath: string) => {
     const entries: { name: string; path: string; isDirectory: boolean }[] = []
     try {

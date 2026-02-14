@@ -43,12 +43,12 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 ### Folder view
 
-- [ ] **1.21** Main: `openFolder()` — directory picker, return path
-- [ ] **1.22** Main: `listDirectory(dirPath)` — return list of entries: { name, path, isDirectory } for subdirs and files with .md or .txt only
-- [ ] **1.23** Renderer: FolderView component — tree UI (root = opened folder)
-- [ ] **1.24** Tree: directories expandable; list .md/.txt and subdirs per directory
-- [ ] **1.25** Click file in tree: open file (same as Open file), start watching
-- [ ] **1.26** Persist `lastOpenedFolder` in session; restore folder view on app load when present
+- [x] **1.21** Main: `openFolder()` — directory picker, return path
+- [x] **1.22** Main: `listDirectory(dirPath)` — return list of entries: { name, path, isDirectory } for subdirs and files with .md or .txt only
+- [x] **1.23** Renderer: FolderView component — tree UI (root = opened folder)
+- [x] **1.24** Tree: directories expandable; list .md/.txt and subdirs per directory
+- [x] **1.25** Click file in tree: open file (same as Open file), start watching
+- [x] **1.26** Persist `lastOpenedFolder` in session; restore folder view on app load when present
 
 ---
 

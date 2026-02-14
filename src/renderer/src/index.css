@@ -41,6 +41,117 @@ body {
   max-width: 400px;
 }
 
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  flex-shrink: 0;
+  width: 220px;
+  border-right: 1px solid #e0e0e0;
+  background: #f8f8f8;
+  overflow: auto;
+}
+
+.folder-view {
+  padding: 8px 0;
+  font-size: 0.8125rem;
+}
+
+.folder-view-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+
+.folder-view-placeholder {
+  margin: 0;
+  color: #888;
+  font-size: 0.8125rem;
+}
+
+.folder-view-root {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.folder-view-root-icon {
+  flex-shrink: 0;
+}
+
+.folder-view-root-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-view-loading {
+  padding: 8px 12px;
+  color: #888;
+}
+
+.folder-view-loading-nested {
+  padding: 4px 12px 4px 36px;
+  font-size: 0.75rem;
+}
+
+.folder-view-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.folder-view-entry {
+  margin: 0;
+}
+
+.folder-view-entry-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 12px 4px 24px;
+  border: none;
+  background: transparent;
+  color: #333;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folder-view-entry-btn:hover {
+  background: #e8e8e8;
+}
+
+.folder-view-entry-chevron {
+  flex-shrink: 0;
+  width: 1ch;
+  color: #666;
+}
+
+.folder-view-entry-icon {
+  flex-shrink: 0;
+}
+
+.folder-view-entry-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-body > .resizable-split {
+  flex: 1;
+  min-width: 0;
+}
+
 .resizable-split {
   display: flex;
   flex: 1;
