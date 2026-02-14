@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare module '*.png' {
+  const src: string
+  export default src
+}
+
 interface Window {
   electron: {
     ping: () => Promise<string>
@@ -8,6 +13,7 @@ interface Window {
     listDirectory: (dirPath: string) => Promise<{ name: string; path: string; isDirectory: boolean }[]>
     readFile: (filePath: string) => Promise<string>
     watchFile: (filePath: string) => Promise<void>
+    unwatchFile: () => Promise<void>
     writeFile: (filePath: string, content: string) => Promise<void>
     getSession: () => Promise<Record<string, unknown>>
     setSession: (data: Record<string, unknown>) => Promise<void>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import mermaid from 'mermaid'
 import { EditorPanel, type KanbanRegion } from '@/components/EditorPanel'
+import logoUrl from '@/assets/md-watch-logo.png'
 import { FolderView } from '@/components/FolderView'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { ResizableSplit } from '@/components/ResizableSplit'
@@ -16,6 +17,9 @@ function App() {
   /** Kanban region in current file: selection range { start, end } (2.1). Used by parser (2.2) and kanban UI (2.4+). */
   const [kanbanRegion, setKanbanRegion] = useState<KanbanRegion | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [hideEditor, setHideEditor] = useState(false)
+  const [hidePreview, setHidePreview] = useState(false)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const savedScrollRatioRef = useRef<number>(0)
   const shouldRestoreScrollRef = useRef(false)
@@ -100,6 +104,9 @@ function App() {
     if (sel && typeof sel === 'object' && typeof (sel as { start?: number }).start === 'number' && typeof (sel as { end?: number }).end === 'number') {
       setKanbanRegion({ start: (sel as { start: number }).start, end: (sel as { end: number }).end })
     }
+    if (session?.theme === 'dark' || session?.theme === 'light') {
+      setTheme(session.theme)
+    }
   }, [])
 
   // Restore session on load (3.5)
@@ -120,6 +127,7 @@ function App() {
     const result = await window.electron.openFile()
     if (!result) return
     shouldRestoreScrollRef.current = false
+    setFolderRootPath(null)
     setCurrentFilePath(result.path)
     setCurrentContent(result.content)
     await window.electron.watchFile(result.path)
@@ -145,6 +153,20 @@ function App() {
     if (result.success) showToast('Data imported.', 'success')
     else showToast(result.error ?? 'Import failed.', 'error')
   }, [showToast])
+
+  const handleCloseSession = useCallback(async () => {
+    await window.electron.unwatchFile()
+    setCurrentFilePath(null)
+    setCurrentContent('')
+    setFolderRootPath(null)
+    setKanbanRegion(null)
+    await window.electron.setSession({
+      lastFilePath: null,
+      lastOpenedFolder: null,
+      previewScrollRatio: null,
+      kanbanSelection: null,
+    })
+  }, [])
 
   // Persist preview scroll ratio on user scroll (3.6)
   const scrollPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -221,9 +243,16 @@ function App() {
     mermaid.run({ nodes, suppressErrors: true }).catch(() => {})
   }, [currentContent, isMarkdown])
 
+  const handleThemeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value as 'light' | 'dark'
+    setTheme(value)
+    window.electron.setSession({ theme: value })
+  }, [])
+
   return (
-    <div className="app">
+    <div className="app" data-theme={theme}>
       <header className="app-header">
+        <img src={logoUrl} alt="MD-Li" className="app-logo" />
         <button type="button" onClick={handleOpenFile}>
           Open file
         </button>
@@ -236,6 +265,34 @@ function App() {
         <button type="button" onClick={handleImportSession}>
           Import data
         </button>
+        <button type="button" onClick={handleCloseSession}>
+          Close session
+        </button>
+        <label className="app-header-toggle">
+          <input
+            type="checkbox"
+            checked={hideEditor}
+            onChange={(e) => setHideEditor(e.target.checked)}
+          />
+          Hide editor
+        </label>
+        <label className="app-header-toggle">
+          <input
+            type="checkbox"
+            checked={hidePreview}
+            onChange={(e) => setHidePreview(e.target.checked)}
+          />
+          Hide preview
+        </label>
+        <select
+          className="app-header-theme"
+          value={theme}
+          onChange={handleThemeChange}
+          aria-label="Theme"
+        >
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
         {currentFilePath && (
           <span className="app-header-path" title={currentFilePath}>
             {currentFilePath}
@@ -247,25 +304,49 @@ function App() {
           <FolderView rootPath={folderRootPath} onOpenFile={openFileWithPath} />
         </aside>
         <div className="app-main">
-          <ResizableSplit
-            left={
-              <EditorPanel
-                value={currentContent}
-                onChange={setCurrentContent}
-                filePath={currentFilePath}
-                onSelectionChange={setKanbanRegion}
-              />
-            }
-            right={
+          {hideEditor && hidePreview ? (
+            <div className="app-main-placeholder">Editor and preview are hidden.</div>
+          ) : hideEditor ? (
+            <div className="app-main-single">
               <PreviewPanel
                 ref={previewContainerRef}
                 content={currentContent}
                 isMarkdown={currentFilePath?.toLowerCase().endsWith('.md') ?? false}
                 onScroll={handlePreviewScroll}
               />
-            }
-            defaultLeftPercent={50}
-          />
+            </div>
+          ) : hidePreview ? (
+            <div className="app-main-single">
+              <EditorPanel
+                value={currentContent}
+                onChange={setCurrentContent}
+                filePath={currentFilePath}
+                onSelectionChange={setKanbanRegion}
+                theme={theme}
+              />
+            </div>
+          ) : (
+            <ResizableSplit
+              left={
+                <EditorPanel
+                  value={currentContent}
+                  onChange={setCurrentContent}
+                  filePath={currentFilePath}
+                  onSelectionChange={setKanbanRegion}
+                  theme={theme}
+                />
+              }
+              right={
+                <PreviewPanel
+                  ref={previewContainerRef}
+                  content={currentContent}
+                  isMarkdown={currentFilePath?.toLowerCase().endsWith('.md') ?? false}
+                  onScroll={handlePreviewScroll}
+                />
+              }
+              defaultLeftPercent={50}
+            />
+          )}
           {kanbanState && (
             <section className="kanban-section" aria-label="Kanban board">
               <KanbanBoard state={kanbanState} onKanbanChange={handleKanbanChange} />

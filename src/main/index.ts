@@ -109,6 +109,13 @@ function setupIpcHandlers(): void {
     })
   })
 
+  ipcMain.handle('unwatchFile', () => {
+    if (fileWatcher) {
+      fileWatcher.close()
+      fileWatcher = null
+    }
+  })
+
   ipcMain.handle('writeFile', async (_event, filePath: string, content: string) => {
     fs.writeFileSync(filePath, content, 'utf-8')
   })
@@ -177,10 +184,17 @@ function setupIpcHandlers(): void {
 }
 
 function createWindow(): void {
+  // Icon for title bar and taskbar. Windows uses .ico (multi-size) to avoid squish and small/top-aligned taskbar icon.
+  const assetsDir = path.join(app.getAppPath(), 'assets')
+  const iconPath =
+    process.platform === 'win32'
+      ? path.join(assetsDir, 'md-watch-logo.ico')
+      : path.join(assetsDir, 'md-watch-logo.png')
   const win = new BrowserWindow({
     width: 1000,
     height: 700,
     title: 'MD-Watch',
+    icon: iconPath,
     show: false,
     webPreferences: {
       preload: PRELOAD_PATH,
@@ -188,6 +202,19 @@ function createWindow(): void {
       sandbox: true,
     },
   })
+
+  // Content-Security-Policy: only when packaged to avoid dev (e.g. Vite HMR) breakage
+  if (app.isPackaged) {
+    win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [csp],
+        },
+      })
+    })
+  }
 
   mainWindow = win
   win.on('closed', () => {

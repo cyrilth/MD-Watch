@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electron', {
   listDirectory: (dirPath: string) => ipcRenderer.invoke('listDirectory', dirPath),
   readFile: (filePath: string) => ipcRenderer.invoke('readFile', filePath),
   watchFile: (filePath: string) => ipcRenderer.invoke('watchFile', filePath),
+  unwatchFile: () => ipcRenderer.invoke('unwatchFile'),
   writeFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('writeFile', filePath, content),
 
