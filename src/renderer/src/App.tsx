@@ -6,16 +6,40 @@ import { FolderView } from '@/components/FolderView'
 import { PreviewPanel } from '@/components/PreviewPanel'
 import { ResizableSplit } from '@/components/ResizableSplit'
 import { kanbanToMarkdown, parseKanbanSelection } from '@/kanban/parser'
+import { SAMPLE_KANBAN_MARKDOWN } from '@/kanban/sample'
 import { KanbanBoard } from '@/components/KanbanBoard'
 
 mermaid.initialize({ startOnLoad: false })
 
+// ---------------------------------------------------------------------------
+// Tab types and helpers
+// ---------------------------------------------------------------------------
+
+type Tab = {
+  id: string
+  filePath: string | null
+  content: string
+  kanbanRegion: KanbanRegion | null
+}
+
+let nextTabId = 1
+function createTabId(): string {
+  return `tab-${nextTabId++}`
+}
+
+function basename(filePath: string): string {
+  const parts = filePath.replace(/\\/g, '/').split('/')
+  return parts[parts.length - 1] || filePath
+}
+
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
+
 function App() {
-  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null)
-  const [currentContent, setCurrentContent] = useState('')
+  const [tabs, setTabs] = useState<Tab[]>([])
+  const [activeTabId, setActiveTabId] = useState<string | null>(null)
   const [folderRootPath, setFolderRootPath] = useState<string | null>(null)
-  /** Kanban region in current file: selection range { start, end } (2.1). Used by parser (2.2) and kanban UI (2.4+). */
-  const [kanbanRegion, setKanbanRegion] = useState<KanbanRegion | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [hideEditor, setHideEditor] = useState(false)
   const [hidePreview, setHidePreview] = useState(false)
@@ -24,6 +48,53 @@ function App() {
   const savedScrollRatioRef = useRef<number>(0)
   const shouldRestoreScrollRef = useRef(false)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [showKanbanInstructionModal, setShowKanbanInstructionModal] = useState(false)
+  const [showKanban, setShowKanban] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+
+  // ---------------------------------------------------------------------------
+  // Derived active tab
+  // ---------------------------------------------------------------------------
+
+  const activeTab: Tab | null = useMemo(
+    () => tabs.find((t) => t.id === activeTabId) ?? null,
+    [tabs, activeTabId]
+  )
+
+  const currentFilePath = activeTab?.filePath ?? null
+  const currentContent = activeTab?.content ?? ''
+  const kanbanRegion = activeTab?.kanbanRegion ?? null
+
+  // ---------------------------------------------------------------------------
+  // Tab mutators
+  // ---------------------------------------------------------------------------
+
+  /** Update a field on a specific tab by id. */
+  const updateTab = useCallback((tabId: string, patch: Partial<Tab>) => {
+    setTabs((prev) => prev.map((t) => (t.id === tabId ? { ...t, ...patch } : t)))
+  }, [])
+
+  /** Update the active tab's content. */
+  const setCurrentContent = useCallback(
+    (content: string) => {
+      if (!activeTabId) return
+      updateTab(activeTabId, { content })
+    },
+    [activeTabId, updateTab]
+  )
+
+  /** Update the active tab's kanban region. */
+  const setKanbanRegion = useCallback(
+    (region: KanbanRegion | null) => {
+      if (!activeTabId) return
+      updateTab(activeTabId, { kanbanRegion: region })
+    },
+    [activeTabId, updateTab]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Toast
+  // ---------------------------------------------------------------------------
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
@@ -34,12 +105,10 @@ function App() {
     }, 3000)
   }, [])
 
-  // Clear kanban region when file changes (range is for previous file)
-  useEffect(() => {
-    setKanbanRegion(null)
-  }, [currentFilePath])
+  // ---------------------------------------------------------------------------
+  // Kanban state (derived)
+  // ---------------------------------------------------------------------------
 
-  // Re-parse on content and selection change; invalid range clears kanban (2.2, 2.3, 2.8)
   const kanbanState = useMemo(() => {
     if (!kanbanRegion || kanbanRegion.start === kanbanRegion.end) return null
     const len = currentContent.length
@@ -49,72 +118,199 @@ function App() {
     return parseKanbanSelection(currentContent, kanbanRegion)
   }, [currentContent, kanbanRegion])
 
-  // When range becomes invalid, clear selection so UI doesn’t show stale kanban (2.8)
+  // When range becomes invalid, clear selection
   useEffect(() => {
-    if (!kanbanRegion) return
+    if (!kanbanRegion || !activeTabId) return
     const len = currentContent.length
     if (kanbanRegion.start > len || kanbanRegion.end > len || kanbanRegion.start < 0) {
       setKanbanRegion(null)
     }
-  }, [currentContent, kanbanRegion])
+  }, [currentContent, kanbanRegion, activeTabId, setKanbanRegion])
 
-  // On card drop: replace region with new markdown, update content, write file (2.6, 2.7)
+  // ---------------------------------------------------------------------------
+  // Kanban change handler
+  // ---------------------------------------------------------------------------
+
   const handleKanbanChange = useCallback(
     (next: { columns: { id: string; title: string; cards: { id: string; text: string }[] }[] }) => {
-      if (!kanbanRegion || !currentFilePath) return
+      if (!kanbanRegion || !activeTabId) return
       const newMarkdown = kanbanToMarkdown(next)
       const newContent =
         currentContent.slice(0, kanbanRegion.start) +
         newMarkdown +
         currentContent.slice(kanbanRegion.end)
-      setCurrentContent(newContent)
-      window.electron.writeFile(currentFilePath, newContent).catch(() => {})
+      updateTab(activeTabId, {
+        content: newContent,
+        kanbanRegion: { start: kanbanRegion.start, end: kanbanRegion.start + newMarkdown.length },
+      })
+      if (currentFilePath) {
+        window.electron.writeFile(currentFilePath, newContent).catch(() => {})
+      }
     },
-    [currentContent, kanbanRegion, currentFilePath]
+    [currentContent, kanbanRegion, currentFilePath, activeTabId, updateTab]
   )
 
-  const openFileWithPath = useCallback(async (path: string) => {
-    shouldRestoreScrollRef.current = false
-    try {
-      const content = await window.electron.readFile(path)
-      setCurrentFilePath(path)
-      setCurrentContent(content)
-      await window.electron.watchFile(path)
-      await window.electron.setSession({ lastFilePath: path })
-    } catch {
-      // ignore
-    }
+  // ---------------------------------------------------------------------------
+  // New file – create a blank untitled tab
+  // ---------------------------------------------------------------------------
+
+  const handleNewFile = useCallback(() => {
+    const id = createTabId()
+    const newTab: Tab = { id, filePath: null, content: '', kanbanRegion: null }
+    setTabs((prev) => [...prev, newTab])
+    setActiveTabId(id)
+    window.electron.unwatchFile()
   }, [])
 
-  const openFileWithPathRef = useRef(openFileWithPath)
-  openFileWithPathRef.current = openFileWithPath
+  // ---------------------------------------------------------------------------
+  // Open file in a tab (reuse existing tab for same path)
+  // ---------------------------------------------------------------------------
+
+  const openFileInTab = useCallback(
+    async (path: string) => {
+      shouldRestoreScrollRef.current = false
+      // If already open in a tab, just switch to it
+      const existing = tabs.find((t) => t.filePath === path)
+      if (existing) {
+        setActiveTabId(existing.id)
+        await window.electron.watchFile(path)
+        return
+      }
+      // Create new tab
+      try {
+        const content = await window.electron.readFile(path)
+        const id = createTabId()
+        const newTab: Tab = { id, filePath: path, content, kanbanRegion: null }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabId(id)
+        await window.electron.watchFile(path)
+      } catch {
+        // ignore
+      }
+    },
+    [tabs]
+  )
+
+  const openFileInTabRef = useRef(openFileInTab)
+  openFileInTabRef.current = openFileInTab
+
+  // ---------------------------------------------------------------------------
+  // Switch tab: watch new active file
+  // ---------------------------------------------------------------------------
+
+  const switchTab = useCallback(
+    async (tabId: string) => {
+      setActiveTabId(tabId)
+      const tab = tabs.find((t) => t.id === tabId)
+      if (tab?.filePath) {
+        await window.electron.watchFile(tab.filePath)
+      } else {
+        await window.electron.unwatchFile()
+      }
+    },
+    [tabs]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Close tab
+  // ---------------------------------------------------------------------------
+
+  const closeTab = useCallback(
+    async (tabId: string) => {
+      setTabs((prev) => {
+        const idx = prev.findIndex((t) => t.id === tabId)
+        if (idx === -1) return prev
+        const next = prev.filter((t) => t.id !== tabId)
+        // If closing the active tab, switch to an adjacent one
+        if (tabId === activeTabId) {
+          if (next.length === 0) {
+            setActiveTabId(null)
+            window.electron.unwatchFile()
+          } else {
+            const newIdx = Math.min(idx, next.length - 1)
+            const newActive = next[newIdx]
+            setActiveTabId(newActive.id)
+            if (newActive.filePath) {
+              window.electron.watchFile(newActive.filePath)
+            } else {
+              window.electron.unwatchFile()
+            }
+          }
+        }
+        return next
+      })
+    },
+    [activeTabId]
+  )
+
+  // ---------------------------------------------------------------------------
+  // Session restore / apply
+  // ---------------------------------------------------------------------------
 
   const applySession = useCallback(async (session: Record<string, unknown>) => {
     if (typeof session?.lastOpenedFolder === 'string' && session.lastOpenedFolder.trim()) {
       setFolderRootPath(session.lastOpenedFolder)
     }
-    if (typeof session?.lastFilePath === 'string' && session.lastFilePath.trim()) {
-      await openFileWithPathRef.current(session.lastFilePath).catch(() => {})
+    if (session?.theme === 'dark' || session?.theme === 'light') {
+      setTheme(session.theme)
     }
+
+    // Restore tabs
+    const savedTabs = session?.openTabs
+    if (Array.isArray(savedTabs) && savedTabs.length > 0) {
+      const restoredTabs: Tab[] = []
+      for (const entry of savedTabs) {
+        if (typeof entry?.filePath !== 'string' || !entry.filePath.trim()) continue
+        try {
+          const content = await window.electron.readFile(entry.filePath)
+          const id = createTabId()
+          let kr: KanbanRegion | null = null
+          if (
+            entry.kanbanRegion &&
+            typeof entry.kanbanRegion === 'object' &&
+            typeof entry.kanbanRegion.start === 'number' &&
+            typeof entry.kanbanRegion.end === 'number'
+          ) {
+            kr = { start: entry.kanbanRegion.start, end: entry.kanbanRegion.end }
+          }
+          restoredTabs.push({ id, filePath: entry.filePath, content, kanbanRegion: kr })
+        } catch {
+          // skip unreadable files
+        }
+      }
+      if (restoredTabs.length > 0) {
+        setTabs(restoredTabs)
+        // Restore active tab by saved activeTabIndex or default to first
+        let activeIdx = 0
+        if (typeof session?.activeTabIndex === 'number' && session.activeTabIndex < restoredTabs.length) {
+          activeIdx = session.activeTabIndex
+        }
+        setActiveTabId(restoredTabs[activeIdx].id)
+        const activeFile = restoredTabs[activeIdx].filePath
+        if (activeFile) {
+          await window.electron.watchFile(activeFile)
+        }
+      }
+    } else if (typeof session?.lastFilePath === 'string' && session.lastFilePath.trim()) {
+      // Backwards compat: single file session
+      await openFileInTabRef.current(session.lastFilePath).catch(() => {})
+    } else {
+      // No saved tabs — start with a blank untitled tab so the editor is usable
+      const id = createTabId()
+      setTabs([{ id, filePath: null, content: '', kanbanRegion: null }])
+      setActiveTabId(id)
+    }
+
     if (typeof session?.previewScrollRatio === 'number') {
       savedScrollRatioRef.current = session.previewScrollRatio
       shouldRestoreScrollRef.current = true
     }
-    const sel = session?.kanbanSelection
-    if (sel && typeof sel === 'object' && typeof (sel as { start?: number }).start === 'number' && typeof (sel as { end?: number }).end === 'number') {
-      setKanbanRegion({ start: (sel as { start: number }).start, end: (sel as { end: number }).end })
-    }
-    if (session?.theme === 'dark' || session?.theme === 'light') {
-      setTheme(session.theme)
-    }
   }, [])
 
-  // Restore session on load (3.5)
   useEffect(() => {
     window.electron.getSession().then(applySession)
   }, [applySession])
 
-  // On import: reload session (3.8); toast shown from handleImportSession (3.9)
   useEffect(() => {
     const unsubscribe = window.electron.onSessionImported(() => {
       window.electron.getSession().then(applySession)
@@ -122,16 +318,39 @@ function App() {
     return unsubscribe
   }, [applySession])
 
-  // Sync: on file load — set content so editor and preview update (no scroll restore)
+  // ---------------------------------------------------------------------------
+  // Persist tabs to session
+  // ---------------------------------------------------------------------------
+
+  const sessionPersistRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (sessionPersistRef.current) clearTimeout(sessionPersistRef.current)
+    sessionPersistRef.current = setTimeout(() => {
+      sessionPersistRef.current = null
+      const openTabs = tabs
+        .filter((t) => t.filePath)
+        .map((t) => ({ filePath: t.filePath, kanbanRegion: t.kanbanRegion }))
+      const activeIdx = tabs.findIndex((t) => t.id === activeTabId)
+      window.electron.setSession({
+        openTabs,
+        activeTabIndex: activeIdx >= 0 ? activeIdx : 0,
+        lastFilePath: currentFilePath,
+      })
+    }, 500)
+    return () => {
+      if (sessionPersistRef.current) clearTimeout(sessionPersistRef.current)
+    }
+  }, [tabs, activeTabId, currentFilePath])
+
+  // ---------------------------------------------------------------------------
+  // Open file (dialog)
+  // ---------------------------------------------------------------------------
+
   const handleOpenFile = useCallback(async () => {
     const result = await window.electron.openFile()
     if (!result) return
     shouldRestoreScrollRef.current = false
-    setFolderRootPath(null)
-    setCurrentFilePath(result.path)
-    setCurrentContent(result.content)
-    await window.electron.watchFile(result.path)
-    await window.electron.setSession({ lastFilePath: result.path })
+    await openFileInTabRef.current(result.path)
   }, [])
 
   const handleOpenFolder = useCallback(async () => {
@@ -156,11 +375,15 @@ function App() {
 
   const handleCloseSession = useCallback(async () => {
     await window.electron.unwatchFile()
-    setCurrentFilePath(null)
-    setCurrentContent('')
+    // Create a fresh blank tab so the editor stays usable
+    const id = createTabId()
+    const blankTab: Tab = { id, filePath: null, content: '', kanbanRegion: null }
+    setTabs([blankTab])
+    setActiveTabId(id)
     setFolderRootPath(null)
-    setKanbanRegion(null)
     await window.electron.setSession({
+      openTabs: null,
+      activeTabIndex: null,
       lastFilePath: null,
       lastOpenedFolder: null,
       previewScrollRatio: null,
@@ -168,7 +391,10 @@ function App() {
     })
   }, [])
 
-  // Persist preview scroll ratio on user scroll (3.6)
+  // ---------------------------------------------------------------------------
+  // Preview scroll persist
+  // ---------------------------------------------------------------------------
+
   const scrollPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handlePreviewScroll = useCallback(() => {
     const el = previewContainerRef.current
@@ -183,23 +409,16 @@ function App() {
     }, 500)
   }, [])
 
-  // Persist kanban selection when it changes (3.6)
-  const kanbanPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    if (!kanbanRegion) return
-    if (kanbanPersistTimeoutRef.current) clearTimeout(kanbanPersistTimeoutRef.current)
-    kanbanPersistTimeoutRef.current = setTimeout(() => {
-      kanbanPersistTimeoutRef.current = null
-      window.electron.setSession({ kanbanSelection: kanbanRegion })
-    }, 300)
-    return () => {
-      if (kanbanPersistTimeoutRef.current) clearTimeout(kanbanPersistTimeoutRef.current)
-    }
-  }, [kanbanRegion])
+  // ---------------------------------------------------------------------------
+  // File watcher: update active tab content on external change
+  // ---------------------------------------------------------------------------
 
-  // Sync: on file-changed (hot reload) — save scroll, mark for restore, then update content
   useEffect(() => {
-    const unsubscribe = window.electron.onFileChanged((_path, content) => {
+    const unsubscribe = window.electron.onFileChanged((changedPath, content) => {
+      // Update the tab that matches the changed path (should be the active one)
+      setTabs((prev) =>
+        prev.map((t) => (t.filePath === changedPath ? { ...t, content } : t))
+      )
       const el = previewContainerRef.current
       if (el) {
         const { scrollTop, scrollHeight, clientHeight } = el
@@ -207,12 +426,11 @@ function App() {
         savedScrollRatioRef.current = maxScroll > 0 ? scrollTop / maxScroll : 0
       }
       shouldRestoreScrollRef.current = true
-      setCurrentContent(content)
     })
     return unsubscribe
   }, [])
 
-  // Restore preview scroll only after hot reload (1.15 + 1.16), not on first load or user scroll
+  // Restore scroll after hot reload
   useEffect(() => {
     if (!shouldRestoreScrollRef.current) return
     const el = previewContainerRef.current
@@ -232,7 +450,7 @@ function App() {
     }
   }, [currentContent])
 
-  // Run Mermaid on .mermaid nodes after markdown is rendered; re-runs on file change so diagrams update on hot reload (1.19 + 1.20)
+  // Mermaid
   const isMarkdown = currentFilePath?.toLowerCase().endsWith('.md')
   useEffect(() => {
     if (!isMarkdown) return
@@ -243,18 +461,159 @@ function App() {
     mermaid.run({ nodes, suppressErrors: true }).catch(() => {})
   }, [currentContent, isMarkdown])
 
+  // ---------------------------------------------------------------------------
+  // Save / Save As
+  // ---------------------------------------------------------------------------
+
+  const handleSave = useCallback(async () => {
+    if (!activeTabId) return
+    if (currentFilePath) {
+      // File exists on disk: write current content
+      await window.electron.writeFile(currentFilePath, currentContent)
+      showToast('Saved.', 'success')
+    } else {
+      // New file: prompt Save As
+      const result = await window.electron.saveFileAs(currentContent)
+      if (result) {
+        updateTab(activeTabId, { filePath: result.path })
+        await window.electron.watchFile(result.path)
+        showToast('Saved.', 'success')
+      }
+    }
+  }, [activeTabId, currentFilePath, currentContent, updateTab, showToast])
+
+  const handleSaveAs = useCallback(async () => {
+    if (!activeTabId) return
+    const defaultName = currentFilePath ? basename(currentFilePath) : undefined
+    const result = await window.electron.saveFileAs(currentContent, defaultName)
+    if (result) {
+      updateTab(activeTabId, { filePath: result.path })
+      await window.electron.watchFile(result.path)
+      showToast('Saved.', 'success')
+    }
+  }, [activeTabId, currentFilePath, currentContent, updateTab, showToast])
+
+  const handleRefreshFile = useCallback(async () => {
+    if (!activeTabId || !currentFilePath) return
+    try {
+      // Save scroll position before reload
+      const el = previewContainerRef.current
+      if (el) {
+        const { scrollTop, scrollHeight, clientHeight } = el
+        const maxScroll = scrollHeight - clientHeight
+        savedScrollRatioRef.current = maxScroll > 0 ? scrollTop / maxScroll : 0
+      }
+      shouldRestoreScrollRef.current = true
+
+      const content = await window.electron.readFile(currentFilePath)
+      // Keep kanban region if still valid, otherwise clear it
+      const kr = kanbanRegion
+      if (kr && (kr.start > content.length || kr.end > content.length)) {
+        updateTab(activeTabId, { content, kanbanRegion: null })
+      } else {
+        updateTab(activeTabId, { content })
+      }
+      showToast('File reloaded.', 'success')
+    } catch {
+      showToast('Failed to reload file.', 'error')
+    }
+  }, [activeTabId, currentFilePath, kanbanRegion, updateTab, showToast])
+
   const handleThemeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value as 'light' | 'dark'
     setTheme(value)
     window.electron.setSession({ theme: value })
   }, [])
 
+  // ---------------------------------------------------------------------------
+  // Keyboard shortcuts
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey
+      // Ctrl+S / Ctrl+Shift+S — Save / Save As
+      if (mod && e.key === 's') {
+        e.preventDefault()
+        if (e.shiftKey) handleSaveAs()
+        else handleSave()
+        return
+      }
+      // Ctrl+N — New file
+      if (mod && e.key === 'n') {
+        e.preventDefault()
+        handleNewFile()
+        return
+      }
+      // Ctrl+O — Open file
+      if (mod && e.key === 'o' && !e.shiftKey) {
+        e.preventDefault()
+        handleOpenFile()
+        return
+      }
+      // Ctrl+R — Refresh
+      if (mod && e.key === 'r') {
+        e.preventDefault()
+        handleRefreshFile()
+        return
+      }
+      // Ctrl+W — Close tab
+      if (mod && e.key === 'w') {
+        e.preventDefault()
+        if (activeTabId) closeTab(activeTabId)
+        return
+      }
+      // Ctrl+K — Toggle kanban
+      if (mod && e.key === 'k') {
+        e.preventDefault()
+        setShowKanban((v) => !v)
+        return
+      }
+      // Ctrl+Tab — Next tab
+      if (e.ctrlKey && e.key === 'Tab') {
+        e.preventDefault()
+        if (tabs.length > 1 && activeTabId) {
+          const idx = tabs.findIndex((t) => t.id === activeTabId)
+          const nextIdx = e.shiftKey
+            ? (idx - 1 + tabs.length) % tabs.length
+            : (idx + 1) % tabs.length
+          switchTab(tabs[nextIdx].id)
+        }
+        return
+      }
+      // F1 — Help
+      if (e.key === 'F1') {
+        e.preventDefault()
+        setShowHelp((v) => !v)
+        return
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [handleSave, handleSaveAs, handleNewFile, handleOpenFile, handleRefreshFile, activeTabId, closeTab, tabs, switchTab])
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <div className="app" data-theme={theme}>
       <header className="app-header">
         <img src={logoUrl} alt="MD-Li" className="app-logo" />
+        <button type="button" onClick={handleNewFile}>
+          New file
+        </button>
         <button type="button" onClick={handleOpenFile}>
           Open file
+        </button>
+        <button type="button" onClick={handleRefreshFile}>
+          Refresh
+        </button>
+        <button type="button" onClick={handleSave}>
+          Save
+        </button>
+        <button type="button" onClick={handleSaveAs}>
+          Save as
         </button>
         <button type="button" onClick={handleOpenFolder}>
           Open folder
@@ -284,6 +643,13 @@ function App() {
           />
           Hide preview
         </label>
+        <button
+          type="button"
+          className={showKanban ? 'app-header-btn-active' : ''}
+          onClick={() => setShowKanban((v) => !v)}
+        >
+          Kanban
+        </button>
         <select
           className="app-header-theme"
           value={theme}
@@ -293,15 +659,43 @@ function App() {
           <option value="light">Light</option>
           <option value="dark">Dark</option>
         </select>
-        {currentFilePath && (
-          <span className="app-header-path" title={currentFilePath}>
-            {currentFilePath}
-          </span>
-        )}
+        <button type="button" onClick={() => setShowHelp(true)}>
+          Help
+        </button>
       </header>
+
+      {/* Tab bar */}
+      {tabs.length > 0 && (
+        <div className="tab-bar">
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              className={`tab ${tab.id === activeTabId ? 'tab-active' : ''}`}
+              onClick={() => switchTab(tab.id)}
+              title={tab.filePath ?? 'Untitled'}
+            >
+              <span className="tab-label">
+                {tab.filePath ? basename(tab.filePath) : 'Untitled'}
+              </span>
+              <button
+                type="button"
+                className="tab-close"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  closeTab(tab.id)
+                }}
+                aria-label="Close tab"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="app-body">
         <aside className="app-sidebar">
-          <FolderView rootPath={folderRootPath} onOpenFile={openFileWithPath} />
+          <FolderView rootPath={folderRootPath} onOpenFile={openFileInTab} />
         </aside>
         <div className="app-main">
           {hideEditor && hidePreview ? (
@@ -311,7 +705,7 @@ function App() {
               <PreviewPanel
                 ref={previewContainerRef}
                 content={currentContent}
-                isMarkdown={currentFilePath?.toLowerCase().endsWith('.md') ?? false}
+                isMarkdown={currentFilePath ? currentFilePath.toLowerCase().endsWith('.md') : true}
                 onScroll={handlePreviewScroll}
               />
             </div>
@@ -340,20 +734,107 @@ function App() {
                 <PreviewPanel
                   ref={previewContainerRef}
                   content={currentContent}
-                  isMarkdown={currentFilePath?.toLowerCase().endsWith('.md') ?? false}
+                  isMarkdown={currentFilePath ? currentFilePath.toLowerCase().endsWith('.md') : true}
                   onScroll={handlePreviewScroll}
                 />
               }
               defaultLeftPercent={50}
             />
           )}
-          {kanbanState && (
-            <section className="kanban-section" aria-label="Kanban board">
-              <KanbanBoard state={kanbanState} onKanbanChange={handleKanbanChange} />
-            </section>
+          {showKanban && (
+            kanbanState ? (
+              <section className="kanban-section" aria-label="Kanban board">
+                <KanbanBoard state={kanbanState} onKanbanChange={handleKanbanChange} />
+              </section>
+            ) : (
+              <section className="kanban-section kanban-instructions" aria-label="Kanban instructions">
+                <div className="kanban-instructions-content">
+                  <p className="kanban-instructions-title">Kanban board</p>
+                  <p className="kanban-instructions-text">
+                    Select markdown in the editor where headings are columns and list items are cards. Drag cards between columns to reorder; changes write back to the file.
+                  </p>
+                  <button
+                    type="button"
+                    className="kanban-instructions-load"
+                    onClick={() => setShowKanbanInstructionModal(true)}
+                  >
+                    Kanban instruction
+                  </button>
+                </div>
+              </section>
+            )
+          )}
+          {showKanbanInstructionModal && (
+            <div
+              className="kanban-modal-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="kanban-modal-title"
+              onClick={() => setShowKanbanInstructionModal(false)}
+            >
+              <div
+                className="kanban-modal"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 id="kanban-modal-title" className="kanban-modal-title">How to use Kanban</h2>
+                <p className="kanban-modal-p">
+                  In the editor, select markdown where <strong>headings</strong> (<code>#</code>, <code>##</code>, etc.) are columns and <strong>list items</strong> (<code>-</code> or <code>*</code> followed by a space) are cards. The board appears below when the selection is valid. Drag cards between columns to reorder; edits are written back to the file.
+                </p>
+                <p className="kanban-modal-p">
+                  Use the sample format below: select and copy it, then paste into your document and select the pasted block to try the kanban board.
+                </p>
+                <div className="kanban-modal-sample-wrap">
+                  <pre className="kanban-modal-sample"><code>{SAMPLE_KANBAN_MARKDOWN}</code></pre>
+                </div>
+                <button
+                  type="button"
+                  className="kanban-modal-close"
+                  onClick={() => setShowKanbanInstructionModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
+      {showHelp && (
+        <div
+          className="kanban-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="help-modal-title"
+          onClick={() => setShowHelp(false)}
+        >
+          <div className="kanban-modal help-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 id="help-modal-title" className="kanban-modal-title">Keyboard shortcuts</h2>
+            <table className="help-shortcut-table">
+              <thead>
+                <tr><th>Shortcut</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><kbd>Ctrl+N</kbd></td><td>New file</td></tr>
+                <tr><td><kbd>Ctrl+O</kbd></td><td>Open file</td></tr>
+                <tr><td><kbd>Ctrl+S</kbd></td><td>Save</td></tr>
+                <tr><td><kbd>Ctrl+Shift+S</kbd></td><td>Save as</td></tr>
+                <tr><td><kbd>Ctrl+R</kbd></td><td>Refresh file from disk</td></tr>
+                <tr><td><kbd>Ctrl+W</kbd></td><td>Close current tab</td></tr>
+                <tr><td><kbd>Ctrl+Tab</kbd></td><td>Next tab</td></tr>
+                <tr><td><kbd>Ctrl+Shift+Tab</kbd></td><td>Previous tab</td></tr>
+                <tr><td><kbd>Ctrl+K</kbd></td><td>Toggle kanban panel</td></tr>
+                <tr><td><kbd>F1</kbd></td><td>Toggle this help</td></tr>
+              </tbody>
+            </table>
+            <button
+              type="button"
+              className="kanban-modal-close"
+              onClick={() => setShowHelp(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       {toast && (
         <div className={`app-toast app-toast-${toast.type}`} role="status">
           {toast.message}

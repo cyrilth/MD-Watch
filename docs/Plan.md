@@ -11,9 +11,14 @@ Build an Electron desktop app that:
 - Drives a **bidirectional kanban** from user-selected text in the editor
 - Persists **session** in a local SQLite database
 - Supports **import/export** of session data as raw `.db` files
+- **Tabs** for multiple open files (VS Code–style tab bar)
+- **New file** creates a blank untitled tab; **Save / Save As** write to disk
+- **Refresh** reloads the active file from disk, preserving kanban region and scroll
+- **Kanban toggle** button and instruction modal with sample format
 - **Logo** in header and as window/taskbar icon (Windows: multi-size .ico)
 - **Hide editor / hide preview** toggles to show one panel full-width or both resizable
 - **Dark and light theme** (selector in header; session-persisted; CSS variables; CodeMirror theme prop)
+- **Keyboard shortcuts** for all major actions; **Help modal** (F1) lists them all
 
 ---
 
@@ -108,6 +113,44 @@ flowchart LR
 - **Logo**: MD-Li branding in app header; `assets/md-watch-logo.png` and `assets/md-watch-logo.ico` (Windows title bar and taskbar). Main process sets `BrowserWindow` `icon` from `assets/` (dev: app path; packaged: include in extraResources).
 - **Hide editor / Hide preview**: Header checkboxes; when one is checked that panel is hidden and the other fills the main area; when both checked a placeholder is shown. No session persistence for these toggles.
 - **Dark / light theme**: Header select (Light | Dark). CSS variables on `.app` define light defaults; `.app[data-theme="dark"]` overrides for dark (backgrounds, text, borders, preview, kanban, toasts). Session stores `theme`; restored on load. Editor: CodeMirror `theme` prop set to `'light'` or `'dark'` so the editor matches the app theme.
+
+---
+
+## Tabs, new file, save, refresh (implemented)
+
+- **Tabs**: Multiple files can be open simultaneously. A VS Code–style tab bar shows all open tabs; click to switch, × to close. Session persists `openTabs` (array of `{ filePath, kanbanRegion }`) and `activeTabIndex`.
+- **New file**: Header button + `Ctrl+N`. Creates a blank untitled tab with `filePath: null`. Typing and preview work immediately (defaults to markdown rendering). Save (`Ctrl+S`) prompts for a location; Save As (`Ctrl+Shift+S`) always prompts. After saving, the tab's `filePath` is set and file watching begins.
+- **Save / Save As**: `Ctrl+S` saves to the existing file path, or prompts a save dialog for untitled files. `Ctrl+Shift+S` always prompts a save dialog. Both use the main-process `saveFileAs` IPC handler with `dialog.showSaveDialog`.
+- **Refresh**: Header button + `Ctrl+R`. Re-reads the active file from disk, updates tab content, preserves the kanban region if still valid (clears if out of range), and restores the preview scroll position.
+- **Close session**: Resets all state (tabs, folder, session DB) and opens a fresh blank untitled tab so the editor remains usable.
+
+---
+
+## Kanban toggle and instructions (implemented)
+
+- **Kanban toggle**: Header button "Kanban" (`Ctrl+K`). The kanban section (board or instructions) is only visible when toggled on. Button highlights when active.
+- **Kanban instruction modal**: When kanban is toggled on and no valid selection exists, an "Instructions" button opens a modal explaining how to use the kanban feature, with a copyable sample markdown format. Users can select the sample, copy it, paste into the editor, and select it to activate the board.
+
+---
+
+## Keyboard shortcuts and Help (implemented)
+
+- A single global keyboard handler in the renderer captures common shortcuts:
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+N` | New file |
+| `Ctrl+O` | Open file |
+| `Ctrl+S` | Save |
+| `Ctrl+Shift+S` | Save as |
+| `Ctrl+R` | Refresh file from disk |
+| `Ctrl+W` | Close current tab |
+| `Ctrl+Tab` | Next tab |
+| `Ctrl+Shift+Tab` | Previous tab |
+| `Ctrl+K` | Toggle kanban panel |
+| `F1` | Toggle help |
+
+- **Help modal**: Header "Help" button or `F1`. Opens a styled modal listing all shortcuts in a table with `<kbd>` elements. Shares the modal overlay/card styling with the kanban instruction modal. Supports both light and dark themes.
 
 ---
 

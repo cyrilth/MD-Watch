@@ -31,6 +31,9 @@ export function EditorPanel({
     const main = vu.state.selection.main
     const start = main.from
     const end = main.to
+    // Only report non-empty selections so that a collapsed cursor
+    // (e.g. when clicking outside the editor) does not wipe the kanban region.
+    if (start === end) return
     const last = lastRangeRef.current
     if (last && last.start === start && last.end === end) return
     lastRangeRef.current = { start, end }

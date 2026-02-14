@@ -129,6 +129,12 @@ body {
   background: var(--app-btn-active-bg);
 }
 
+.app-header .app-header-btn-active {
+  background: var(--app-btn-active-bg);
+  border-color: var(--app-preview-link);
+  color: var(--app-preview-link);
+}
+
 .app-header-path {
   font-size: 0.85rem;
   color: var(--app-text-muted);
@@ -171,6 +177,91 @@ body {
 .app-header-theme:focus {
   outline: none;
   border-color: var(--app-preview-link);
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--app-sidebar-bg);
+  border-bottom: 1px solid var(--app-border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+}
+
+.tab-bar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tab-bar::-webkit-scrollbar-thumb {
+  background: var(--app-resizer-bg);
+  border-radius: 2px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  color: var(--app-text-muted);
+  background: transparent;
+  border-right: 1px solid var(--app-border);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background 0.1s ease;
+  min-width: 0;
+}
+
+.tab:hover {
+  background: var(--app-hover-bg);
+}
+
+.tab-active {
+  color: var(--app-text);
+  background: var(--app-bg);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--app-preview-link);
+}
+
+.tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.tab-close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--app-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.1s ease, background 0.1s ease;
+}
+
+.tab-close:hover {
+  opacity: 1;
+  background: var(--app-hover-bg);
+  color: var(--app-text);
+}
+
+.tab-active .tab-close {
+  opacity: 0.8;
 }
 
 .app-toast {
@@ -358,9 +449,216 @@ body {
   padding: 8px;
   max-height: 220px;
   overflow: auto;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.kanban-instructions {
+  max-height: none;
+  min-height: 80px;
+  position: relative;
+  z-index: 0;
+}
+
+.kanban-instructions-content {
+  max-width: 56em;
+  position: relative;
+  z-index: 1;
+}
+
+.kanban-instructions-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin: 0 0 6px 0;
+  color: var(--app-text);
+}
+
+.kanban-instructions-text {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+  color: var(--app-text-muted);
+}
+
+.kanban-instructions-text code {
+  background: var(--app-preview-code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.kanban-instructions-load {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--app-btn-text);
+  background: var(--app-btn-bg);
+  border: 1px solid var(--app-btn-border);
+  border-radius: 6px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.kanban-instructions-load:hover {
+  background: var(--app-btn-hover-bg);
+  border-color: var(--app-btn-hover-bg);
+}
+
+.kanban-instructions-load:active {
+  background: var(--app-btn-active-bg);
+}
+
+.kanban-instructions-load:focus {
+  outline: none;
+  border-color: var(--app-preview-link);
+}
+
+/* Kanban instruction modal */
+.kanban-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.kanban-modal {
+  background: var(--app-header-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.kanban-modal-title {
+  margin: 0 0 12px 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.kanban-modal-p {
+  margin: 0 0 10px 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--app-text-muted);
+}
+
+.kanban-modal-p code {
+  background: var(--app-preview-code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.kanban-modal-sample-wrap {
+  margin: 14px 0;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  overflow: auto;
+  background: var(--app-preview-code-bg);
+}
+
+.kanban-modal-sample {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  color: var(--app-preview-text);
+  white-space: pre;
+  user-select: all;
+}
+
+.kanban-modal-sample code {
+  background: none;
+  padding: 0;
+}
+
+.kanban-modal-close {
+  margin-top: 8px;
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--app-btn-text);
+  background: var(--app-btn-bg);
+  border: 1px solid var(--app-btn-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.kanban-modal-close:hover {
+  background: var(--app-btn-hover-bg);
+  border-color: var(--app-btn-hover-bg);
+}
+
+.kanban-modal-close:active {
+  background: var(--app-btn-active-bg);
+}
+
+.kanban-modal-close:focus {
+  outline: none;
+  border-color: var(--app-preview-link);
+}
+
+/* Help modal */
+.help-modal {
+  max-width: 480px;
+}
+
+.help-shortcut-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 0.8125rem;
+}
+
+.help-shortcut-table th,
+.help-shortcut-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.help-shortcut-table th {
+  font-weight: 600;
+  color: var(--app-text);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.help-shortcut-table td {
+  color: var(--app-text-muted);
+}
+
+.help-shortcut-table kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  background: var(--app-preview-code-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  color: var(--app-text);
 }
 
 .kanban-board {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
   display: flex;
   gap: 12px;
   align-items: flex-start;
@@ -401,6 +699,8 @@ body {
   border: 1px solid var(--app-kanban-card-border);
   border-radius: 4px;
   cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .kanban-card:active {

@@ -117,3 +117,53 @@ Use this file to track implementation. Check off tasks as they are completed.
 - [x] **5.4** CSS variables for all UI colors; dark overrides under `.app[data-theme="dark"]`
 - [x] **5.5** Theme state (light | dark); header select “Light” / “Dark”; persist theme in session and restore on load
 - [x] **5.6** CodeMirror editor: use component `theme` prop (`'light'` / `'dark'`) so editor matches app theme
+
+---
+
+## Tabs, new file, save, refresh
+
+### Tab system
+
+- [x] **6.1** `Tab` type: `{ id, filePath, content, kanbanRegion }`. State: `tabs[]` and `activeTabId`
+- [x] **6.2** Tab bar UI (VS Code–style): show open tabs; click to switch, × to close
+- [x] **6.3** `openFileInTab`: reuse existing tab for same path or create new tab
+- [x] **6.4** `switchTab`: set active tab and update file watcher
+- [x] **6.5** `closeTab`: remove tab, switch to adjacent tab, unwatch if needed
+- [x] **6.6** Persist `openTabs` and `activeTabIndex` in session; restore on app load
+
+### New file
+
+- [x] **6.7** `handleNewFile`: create blank untitled tab (`filePath: null`, empty content)
+- [x] **6.8** Header "New file" button; `Ctrl+N` keyboard shortcut
+- [x] **6.9** Untitled tabs default to markdown rendering in preview
+- [x] **6.10** On first launch or empty session, start with a blank untitled tab
+
+### Save / Save As
+
+- [x] **6.11** Main process: `saveFileAs` IPC handler using `dialog.showSaveDialog`; writes content and returns `{ path }`
+- [x] **6.12** `handleSave`: write to existing `filePath` or prompt save dialog for untitled files; `Ctrl+S`
+- [x] **6.13** `handleSaveAs`: always prompt save dialog; update tab's `filePath` and start watcher; `Ctrl+Shift+S`
+
+### Refresh
+
+- [x] **6.14** `handleRefreshFile`: re-read file from disk; update active tab content; preserve kanban region if still valid; restore scroll position; `Ctrl+R`
+
+### Close session
+
+- [x] **6.15** `handleCloseSession`: reset all state and create a fresh blank untitled tab so editor stays usable
+
+---
+
+## Kanban toggle and instructions
+
+- [x] **7.1** `showKanban` state (default off); header "Kanban" toggle button with active highlight; `Ctrl+K` shortcut
+- [x] **7.2** Kanban section (board or instructions) only rendered when toggled on
+- [x] **7.3** Kanban instruction modal: "Instructions" button opens modal with usage guide and copyable sample markdown format
+
+---
+
+## Keyboard shortcuts and Help
+
+- [x] **8.1** Global keyboard handler: `Ctrl+N`, `Ctrl+O`, `Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+R`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+K`, `F1`
+- [x] **8.2** Header "Help" button and `F1` toggle a styled modal listing all shortcuts in a table with `<kbd>` elements
+- [x] **8.3** Help modal styled with theme-aware CSS (light/dark); shares overlay/card styling with kanban instruction modal

@@ -1,7 +1,8 @@
 import {
   DndContext,
   type DragEndEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -16,7 +17,8 @@ type KanbanBoardProps = {
 /** Renders columns as lanes and cards as draggable items (2.5). */
 export function KanbanBoard({ state, onKanbanChange }: KanbanBoardProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   )
 
   const handleDragEnd = (event: DragEndEvent) => {

@@ -15,6 +15,7 @@ interface Window {
     watchFile: (filePath: string) => Promise<void>
     unwatchFile: () => Promise<void>
     writeFile: (filePath: string, content: string) => Promise<void>
+    saveFileAs: (content: string, defaultName?: string) => Promise<{ path: string } | null>
     getSession: () => Promise<Record<string, unknown>>
     setSession: (data: Record<string, unknown>) => Promise<void>
     exportSession: () => Promise<{ success: boolean; error?: string }>

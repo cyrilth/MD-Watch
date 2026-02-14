@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('electron', {
   unwatchFile: () => ipcRenderer.invoke('unwatchFile'),
   writeFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('writeFile', filePath, content),
+  saveFileAs: (content: string, defaultName?: string) =>
+    ipcRenderer.invoke('saveFileAs', content, defaultName),
 
   // Session
   getSession: () => ipcRenderer.invoke('getSession'),

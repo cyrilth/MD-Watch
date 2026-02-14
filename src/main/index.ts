@@ -120,6 +120,27 @@ function setupIpcHandlers(): void {
     fs.writeFileSync(filePath, content, 'utf-8')
   })
 
+  /** Save As: show save dialog, write content to chosen path, return { path } or null if canceled. */
+  ipcMain.handle('saveFileAs', async (_event, content: string, defaultName?: string) => {
+    const result = mainWindow
+      ? await dialog.showSaveDialog(mainWindow, {
+          defaultPath: defaultName ?? 'untitled.md',
+          filters: MD_TXT_FILTER,
+        })
+      : await dialog.showSaveDialog({
+          defaultPath: defaultName ?? 'untitled.md',
+          filters: MD_TXT_FILTER,
+        })
+    if (result.canceled || !result.filePath) return null
+    try {
+      fs.writeFileSync(result.filePath, content, 'utf-8')
+      return { path: result.filePath }
+    } catch (err) {
+      console.error('saveFileAs write error', err)
+      return null
+    }
+  })
+
   ipcMain.handle('getSession', () => {
     return readSessionFromDb()
   })
