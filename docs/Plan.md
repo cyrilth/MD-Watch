@@ -11,6 +11,9 @@ Build an Electron desktop app that:
 - Drives a **bidirectional kanban** from user-selected text in the editor
 - Persists **session** in a local SQLite database
 - Supports **import/export** of session data as raw `.db` files
+- **Logo** in header and as window/taskbar icon (Windows: multi-size .ico)
+- **Hide editor / hide preview** toggles to show one panel full-width or both resizable
+- **Dark and light theme** (selector in header; session-persisted; CSS variables; CodeMirror theme prop)
 
 ---
 
@@ -70,7 +73,7 @@ flowchart LR
 
 ## Phase 3: Session (SQLite) and import/export
 
-- **3.1** Main process: better-sqlite3 (or sql.js). Schema: e.g. key/value for `lastFilePath`, `lastOpenedFolder`, `previewScrollTop`, `previewScrollHeight`, kanban selection, etc. `getSession` / `setSession` read/write DB.
+- **3.1** Main process: better-sqlite3 (or sql.js). Schema: e.g. key/value for `lastFilePath`, `lastOpenedFolder`, `previewScrollRatio`, kanban selection, `theme` (light/dark), etc. `getSession` / `setSession` read/write DB.
 - **3.2** On app load: restore last opened file (if readable), last opened folder, scroll, and kanban selection; do not persist or restore folder tree expand/collapse state. On relevant user actions, call `setSession`.
 - **3.3** Export: copy current .db to user-chosen path (e.g. session.db). Import: user picks .db; main merges keys from selected .db into current session DB (imported values override for same keys) and notifies renderer to reload session. Preload: `exportSession()`, `importSession()`; renderer shows success/error.
 
@@ -97,6 +100,14 @@ flowchart LR
 - **main/** — Window, IPC, chokidar, fs, listDirectory, SQLite, import/export.
 - **preload/** — contextBridge + ipcRenderer for file, folder, session, export/import.
 - **src/** — React: App, FolderView, EditorPanel, PreviewPanel, KanbanBoard, hooks, import/export UI.
+
+---
+
+## UI / polish (implemented)
+
+- **Logo**: MD-Li branding in app header; `assets/md-watch-logo.png` and `assets/md-watch-logo.ico` (Windows title bar and taskbar). Main process sets `BrowserWindow` `icon` from `assets/` (dev: app path; packaged: include in extraResources).
+- **Hide editor / Hide preview**: Header checkboxes; when one is checked that panel is hidden and the other fills the main area; when both checked a placeholder is shown. No session persistence for these toggles.
+- **Dark / light theme**: Header select (Light | Dark). CSS variables on `.app` define light defaults; `.app[data-theme="dark"]` overrides for dark (backgrounds, text, borders, preview, kanban, toasts). Session stores `theme`; restored on load. Editor: CodeMirror `theme` prop set to `'light'` or `'dark'` so the editor matches the app theme.
 
 ---
 

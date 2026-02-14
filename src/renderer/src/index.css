@@ -41,6 +41,11 @@ body {
   --app-toast-success-text: #155724;
   --app-toast-error-bg: #f8d7da;
   --app-toast-error-text: #721c24;
+  --app-btn-bg: #f0f0f0;
+  --app-btn-border: #d0d0d0;
+  --app-btn-text: #333;
+  --app-btn-hover-bg: #e4e4e4;
+  --app-btn-active-bg: #d8d8d8;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -79,6 +84,11 @@ body {
   --app-toast-success-text: #d4edda;
   --app-toast-error-bg: #4a1a1a;
   --app-toast-error-text: #f8d7da;
+  --app-btn-bg: #3c3c3c;
+  --app-btn-border: #505050;
+  --app-btn-text: #d4d4d4;
+  --app-btn-hover-bg: #505050;
+  --app-btn-active-bg: #5a5a5a;
 }
 
 .app-header {
@@ -99,8 +109,24 @@ body {
 }
 
 .app-header button {
-  padding: 6px 12px;
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: var(--app-btn-text);
+  background: var(--app-btn-bg);
+  border: 1px solid var(--app-btn-border);
+  border-radius: 6px;
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-header button:hover {
+  background: var(--app-btn-hover-bg);
+  border-color: var(--app-btn-hover-bg);
+}
+
+.app-header button:active {
+  background: var(--app-btn-active-bg);
 }
 
 .app-header-path {
@@ -127,12 +153,24 @@ body {
 
 .app-header-theme {
   font-size: 0.8125rem;
-  padding: 4px 8px;
+  padding: 6px 14px;
+  font-family: inherit;
   cursor: pointer;
-  background: var(--app-bg);
-  color: var(--app-text);
-  border: 1px solid var(--app-border);
-  border-radius: 4px;
+  color: var(--app-btn-text);
+  background: var(--app-btn-bg);
+  border: 1px solid var(--app-btn-border);
+  border-radius: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-header-theme:hover {
+  background: var(--app-btn-hover-bg);
+  border-color: var(--app-btn-hover-bg);
+}
+
+.app-header-theme:focus {
+  outline: none;
+  border-color: var(--app-preview-link);
 }
 
 .app-toast {

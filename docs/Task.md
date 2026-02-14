@@ -98,3 +98,22 @@ Use this file to track implementation. Check off tasks as they are completed.
 
 - [x] **4.1** Optional: lazy-load folder tree (list directory on expand)
 - [x] **4.2** Optional: “Refresh” button for folder view to re-scan current folder
+
+---
+
+## UI: Logo, hide panels, theme
+
+### Logo
+
+- [x] **5.1** Add MD-Li logo image; show in app header
+- [x] **5.2** Set window icon in main process (title bar and taskbar); use multi-size .ico on Windows (assets/md-watch-logo.ico)
+
+### Hide editor / hide preview
+
+- [x] **5.3** Header checkboxes: “Hide editor”, “Hide preview”; when one checked, that panel hidden and the other full-width; when both checked, show placeholder message
+
+### Dark and light theme
+
+- [x] **5.4** CSS variables for all UI colors; dark overrides under `.app[data-theme="dark"]`
+- [x] **5.5** Theme state (light | dark); header select “Light” / “Dark”; persist theme in session and restore on load
+- [x] **5.6** CodeMirror editor: use component `theme` prop (`'light'` / `'dark'`) so editor matches app theme

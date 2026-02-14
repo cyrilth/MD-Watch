@@ -9,8 +9,11 @@ A desktop app to preview Markdown and plain text with hot reload, Mermaid diagra
 - **Folder view**: Tree of .md/.txt files and subdirectories; click to open
 - **Scroll**: Restores preview scroll position on hot reload
 - **Kanban**: Select text → columns (headings) and cards (list items); drag to reorder; edits write back to the file
-- **Session**: SQLite-backed session (last file, folder, scroll, kanban selection)
+- **Session**: SQLite-backed session (last file, folder, scroll, kanban selection, theme)
 - **Import/Export**: Session data as raw `.db` files (export copy, import merge)
+- **Logo**: MD-Li logo in header; window/taskbar icon on Windows (multi-size .ico)
+- **Hide editor / Hide preview**: Header checkboxes to show only editor, only preview, or both (resizable)
+- **Dark and light theme**: Theme selector (Light / Dark) in header; persisted in session; editor uses matching CodeMirror theme
 
 ## Docs
 
